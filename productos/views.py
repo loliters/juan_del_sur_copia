@@ -1,49 +1,79 @@
-from django.shortcuts import render, redirect
-from .logic import ProductoInMemoria
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.urls import reverse
+from .models import Producto
 
-# Create your views here.
+# Listar productos (Inventario)
+def inventario(request):
+    # Mostrar solo productos activos
+    productos = Producto.objects.filter(estado='activo')
+    # para mostrar todos: productos = Producto.objects.all()
+    return render(request, 'productos/inventario.html', {'productos': productos})
 
-# Base de datos en memoria (Datos iniciales para pruebas)
-PRODUCTOS_DB = [
-    ProductoInMemoria(101, "Papas", "Verduras", 1000, 1200, "Activo", "Kg", 50),
-    ProductoInMemoria(102, "Cocacola", "Bebidas", 800, 1200, "Activo", "Unidades", 24),
-]
-
-#lista, inicio
-def inventario_general(request):
-    return render(request, 'productos/inventario.html', {'productos': PRODUCTOS_DB})
-
-#llevar a otra vista
-def registrar_producto(request):
+# Registrar nuevo producto
+def registrar(request):
     if request.method == 'POST':
-        nuevo_id = max([p.id_producto for p in PRODUCTOS_DB]) + 1 if PRODUCTOS_DB else 101
-        nuevo_p = ProductoInMemoria(
-            id_prod=nuevo_id,
-            nombre=request.POST.get('nombre'),
-            id_cat=request.POST.get('categoria'),
-            p_compra=request.POST.get('precio_compra', 0),
-            p_venta=request.POST.get('precio_venta', 0),
-            estado=request.POST.get('estado'),
-            unidad=request.POST.get('tipo_unidad'),
-            stock=request.POST.get('stock', 0)
+        nombre = request.POST.get('nombre')
+        categoria = request.POST.get('categoria')
+        precio_compra = request.POST.get('precio_compra')
+        precio_venta = request.POST.get('precio_venta')
+        stock = request.POST.get('stock')
+        
+        if not nombre:
+            messages.error(request, 'El nombre es obligatorio')
+            return redirect('productos:registrar')
+        
+        producto = Producto.objects.create(
+            nombre=nombre,
+            categoria=categoria,
+            precio_compra=precio_compra,
+            precio_venta=precio_venta,
+            stock=stock,
+            estado='activo'
         )
-        PRODUCTOS_DB.append(nuevo_p)
-        return redirect('inventario')
-    return render(request, 'productos/registro.html')
+        
+        messages.success(request, f'Producto "{nombre}" creado exitosamente')
+        return redirect('productos:inventario')
+    
+    categorias = ["Lacteos", "Pan", "Frutas", "Bebidas", "Snacks", "General"]
+    return render(request, 'productos/registrar.html', {'categorias': categorias})
 
-def editar_producto(request, p_id):
-    producto = next((p for p in PRODUCTOS_DB if p.id_producto == int(p_id)), None)
+# Editar producto
+def editar(request, id_producto):
+    producto = get_object_or_404(Producto, id=id_producto)
+    categorias = ["Lacteos", "Pan", "Frutas", "Bebidas", "Snacks", "General"]
+    
     if request.method == 'POST':
-        producto.nom_producto = request.POST.get('nombre')
-        producto.id_categoria = request.POST.get('categoria')
-        producto.precio_venta = float(request.POST.get('precio_venta'))
+        producto.nombre = request.POST.get('nombre')
+        producto.categoria = request.POST.get('categoria')
+        producto.precio_compra = request.POST.get('precio_compra')
+        producto.precio_venta = request.POST.get('precio_venta')
+        producto.stock = request.POST.get('stock')
         producto.estado = request.POST.get('estado')
-        return redirect('inventario')
-    return render(request, 'productos/editar.html', {'producto': producto})
+        
+        if not producto.nombre:
+            messages.error(request, 'El nombre es obligatorio')
+            return redirect('productos:editar', id_producto=id_producto)
+        
+        producto.save()
+        messages.success(request, f'Producto "{producto.nombre}" actualizado')
+        return redirect('productos:inventario')
+    
+    return render(request, 'productos/editar.html', {
+        'producto': producto,
+        'categorias': categorias
+    })
 
-def eliminar_producto(request, p_id):
-    producto = next((p for p in PRODUCTOS_DB if p.id_producto == int(p_id)), None)
+# Cambiar estado a inactivo (en lugar de eliminar)
+def eliminar(request, id_producto):
+    producto = get_object_or_404(Producto, id=id_producto)
+    
     if request.method == 'POST':
-        PRODUCTOS_DB.remove(producto)
-        return redirect('inventario')
+        nombre = producto.nombre
+        # Cambiar estado a 'inactivo' en lugar de eliminar
+        producto.estado = 'inactivo'
+        producto.save()
+        messages.success(request, f'Producto "{nombre}" marcado como inactivo')
+        return redirect('productos:inventario')
+    
     return render(request, 'productos/eliminar.html', {'producto': producto})

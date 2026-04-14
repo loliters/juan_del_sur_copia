@@ -1,10 +1,13 @@
 #rutas
-from django.urls import path
+from django.urls import path, include
 from . import views
 
+app_name = 'productos'
+
 urlpatterns = [
-    path('', views.inventario_general, name='inventario'),
-    path('nuevo/', views.registrar_producto, name='registrar'),
-    path('editar/<int:p_id>/', views.editar_producto, name='editar'),
-    path('eliminar/<int:p_id>/', views.eliminar_producto, name='eliminar'),
+    path('', views.inventario, name='index'),  # ← Agrega esta línea
+    path('inventario/', views.inventario, name='inventario'),
+    path('registrar/', views.registrar, name='registrar'),
+    path('editar/<int:id_producto>/', views.editar, name='editar'),
+    path('eliminar/<int:id_producto>/', views.eliminar, name='eliminar'),
 ]
