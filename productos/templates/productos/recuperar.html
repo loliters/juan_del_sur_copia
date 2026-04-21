@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Inventario General - Juan del Sur</title>
+    <title>Recuperar Productos - Juan del Sur</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -15,16 +15,9 @@
         .btn-nuevo:hover { background-color: #005fa3; color: white; }
         .badge-activo { background-color: #77B347; color: white; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; }
         .badge-inactivo { background-color: #D1D5DB; color: #4B5563; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; }
-        .action-icon { text-decoration: none; margin: 0 5px; font-size: 1.2rem; transition: 0.3s; }
+        .action-icon { text-decoration: none; margin: 0 5px; font-size: 1.2rem; }
         .search-input { border-radius: 8px; border: 1px solid #ddd; padding: 8px 15px; width: 250px; }
         .alert { margin-bottom: 20px; }
-
-        /* Estilos para iconos personalizados */
-        .icon-editar { color: #0076CE; }
-        .icon-editar:hover { color: #005fa3; }
-
-        .icon-eliminar { color: #DC3545; }
-        .icon-eliminar:hover { color: #a71d2a; }
 
         /* Estilos del menú vertical (sidebar) */
         .sidebar {
@@ -58,17 +51,45 @@
             border-color: #555;
             margin: 15px 0;
         }
-        .sidebar strong {
-            display: block;
-            margin-top: 10px;
-            font-size: 0.85rem;
-            color: #bbb;
-        }
 
         /* Ajuste del contenido principal para que no quede debajo del menú */
         .content-wrapper {
             margin-left: 250px;
             padding: 20px;
+        }
+
+        /* Botón restaurar personalizado */
+        .btn-restaurar {
+            background-color: #77B347;
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            padding: 6px 15px;
+            border: none;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-restaurar:hover {
+            background-color: #5e9137;
+            color: white;
+        }
+
+        .btn-volver {
+            background-color: #6c757d;
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            padding: 8px 20px;
+            border: none;
+            transition: 0.3s;
+        }
+
+        .btn-volver:hover {
+            background-color: #5a6268;
+            color: white;
         }
     </style>
 </head>
@@ -77,19 +98,14 @@
 <!-- MENÚ VERTICAL (SIDEBAR) -->
 <div class="sidebar">
     <h5>Dashboard</h5>
-    <a href="#">Inicio</a>
-    <a href="{% url 'dashboard_admin' %}">Gestión de Usuarios</a>
+    <a href="{% url 'productos:inventario' %}" style="color:#ffc107;">
+     Regresar
+  </a>
 
-    <hr>
-    <a href="{% url 'productos:inventario' %}">Productos</a>
+  
+  <hr>
 
-    <hr>
-    <a href="{% url 'categorias:lista' %}">Categorías</a>
-    <hr>
-    <hr>
-    <a href="{% url 'proveedores:lista' %}">Proveedores</a>
-    <a href="#">Reportes</a>
-    <a href="{% url 'logout' %}">Cerrar sesión</a>
+  <a href="{% url 'logout' %}">Cerrar sesión</a>
 </div>
 
 <!-- CONTENIDO PRINCIPAL CON WRAPPER -->
@@ -106,22 +122,17 @@
         {% endif %}
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold">Inventario General</h2>
-            <div class="d-flex gap-3">
-                <a href="{% url 'productos:registrar' %}" class="btn btn-nuevo px-4">+ Nuevo Producto</a>
-            </div>
+            <h2 class="fw-bold">Productos para Recuperar</h2>
+            
         </div>
 
-        <table class="table align-middle" id="tablaProductos">
+        <table class="table align-middle">
             <thead>
                 <tr>
-                    <th>Código</th>
-                    <th>Producto</th>
-                    <th>Categoría</th>
-                    <th>Precio Compra</th>
-                    <th>Precio Venta</th>
-                    <th>Stock</th>
+                    <th>ID</th>
+                    <th>Codigo</th>
                     <th>Estado</th>
+                    <th>Tipo Unidad</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -130,27 +141,22 @@
                 <tr>
                     <td class="text-muted">{{ p.codProducto }}</td>
                     <td class="fw-medium">{{ p.nomProducto }}</td>
-                    <td class="text-muted">{{ p.categoria }}</td>
-                    <td>${{ p.precioCompra }}</td>
-                    <td class="fw-bold">${{ p.precioVenta }}</td>
-                    <td>{{ p.stockActual }} {{p.tipoUnidad}}</td>
+                    <td class="fw-medium">{{ p.tipoUnidad }}</td>
                     <td>
-                        <span class="{% if p.estado == 'activo' %}badge-activo{% else %}badge-inactivo{% endif %}">
-                            {{ p.get_estado_display }}
-                        </span>
+                        <span class="badge-inactivo">Inactivo</span>
                     </td>
                     <td>
-                        <a href="{% url 'productos:editar' p.id %}" class="action-icon icon-editar" title="Editar">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <a href="{% url 'productos:eliminar' p.id %}" class="action-icon icon-eliminar" title="Eliminar">
-                            <i class="bi bi-trash3"></i>
+                        <a href="{% url 'productos:confirmar_recuperacion' p.id %}" 
+                           class="btn btn-restaurar">
+                            <i class="bi bi-arrow-repeat"></i> Restaurar
                         </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center">No hay productos registrados</td>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        No hay productos eliminados para mostrar.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

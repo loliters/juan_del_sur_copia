@@ -7,10 +7,7 @@
 
   {% load static %}
 
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-  <!-- Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
@@ -59,6 +56,13 @@
     .btn-main:hover {
       background-color: #055a9a;
     }
+
+    /* Spinner de carga */
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.2em;
+    }
   </style>
 </head>
 
@@ -66,52 +70,97 @@
 
 <div class="card-form text-center">
 
-  <!-- LOGO -->
-  <img src="{% static 'IMAGES/logoJuanDelSur.jpg' %}" class="logo">
+  <img src="{% static 'usuarios/IMAGES/logoJuanDelSur.jpg' %}" class="logo">
 
   <h6>Supermercado Juan Del Sur</h6>
   <small class="text-muted">Sucursal Los Pinos</small>
 
   <h5 class="mt-2">Crear Usuario</h5>
 
-  <!-- FORM DJANGO -->
-  <form method="POST">
+  <!-- MENSAJES -->
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+          {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- FORM -->
+  <form method="POST" autocomplete="off" id="registerForm">
     {% csrf_token %}
 
-    <!-- Usuario -->
+    <!-- Nombre -->
     <div class="mb-2 text-start">
-      <label>Usuario</label>
-      <input type="text" name="nom_usuario" class="form-control" required>
+      <label>Nombre</label>
+      <input type="text" 
+             id="nom_usuario" 
+             name="nom_usuario" 
+             class="form-control" 
+             value="{{ request.POST.nom_usuario|default:'' }}" 
+             autocomplete="off"
+             onkeypress="return soloLetras(event)"
+             onpaste="return false">
     </div>
 
-    <!-- Apellido 1 -->
+    <!-- Primer Apellido -->
     <div class="mb-2 text-start">
       <label>Primer Apellido</label>
-      <input type="text" name="ap1" class="form-control" required>
+      <input type="text" 
+             id="ap1" 
+             name="ap1" 
+             class="form-control" 
+             value="{{ request.POST.ap1|default:'' }}" 
+             autocomplete="off"
+             onkeypress="return soloLetras(event)"
+             onpaste="return false">
     </div>
 
-    <!-- Apellido 2 -->
+    <!-- Segundo Apellido -->
     <div class="mb-2 text-start">
       <label>Segundo Apellido</label>
-      <input type="text" name="ap2" class="form-control">
+      <input type="text" 
+             id="ap2" 
+             name="ap2" 
+             class="form-control" 
+             value="{{ request.POST.ap2|default:'' }}" 
+             autocomplete="off"
+             onkeypress="return soloLetras(event)"
+             onpaste="return false">
     </div>
 
-    <!-- Email -->
+    <!-- Email generado en tiempo real -->
     <div class="mb-2 text-start">
-      <label>Correo</label>
-      <input type="email" name="email" class="form-control" required>
+      <label>Correo empresarial</label>
+      <div class="input-group">
+        <input type="email" 
+               id="email_preview" 
+               class="form-control" 
+               readonly 
+               disabled
+               placeholder="Se generará automáticamente"
+               autocomplete="off">
+        <div class="input-group-text" id="emailSpinner" style="display: none;">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Generando...</span>
+          </div>
+        </div>
+      </div>
+      <small class="text-muted" id="emailHelp">
+        El correo se genera automáticamente mientras escribes
+      </small>
     </div>
 
-    <!-- 🔥 ROL (AQUÍ LO AGREGO BIEN) -->
+    <!-- Rol -->
     <div class="mb-2 text-start">
       <label>Rol</label>
       <select name="rol" class="form-select" required>
         <option value="">Seleccione un rol</option>
-
         {% for r in roles %}
-          <option value="{{ r.id }}">{{ r.nom_rol }}</option>
+          <option value="{{ r.id }}" {% if request.POST.rol|stringformat:"s" == r.id|stringformat:"s" %}selected{% endif %}>
+            {{ r.nom_rol }}
+          </option>
         {% endfor %}
-
       </select>
     </div>
 
@@ -119,15 +168,18 @@
     <div class="mb-2 text-start">
       <label>Contraseña</label>
       <input type="password" name="password" class="form-control" required>
+      <small class="text-muted">
+        Mínimo 8 caracteres, letras, números y símbolo (@$!%*#?&._-)
+      </small>
     </div>
 
     <!-- Estado -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <label class="mb-0">Estado</label>
-      <input type="checkbox" name="estado" checked>
+      <label class="mb-0">Activo</label>
+      <input type="checkbox" name="estado" {% if request.POST.estado or not request.POST %}checked{% endif %}>
     </div>
 
-    <!-- BOTONES -->
+    <!-- BOTÓN -->
     <button type="submit" class="btn btn-main w-100 mb-2">
       Registrar
     </button>
@@ -139,6 +191,119 @@
   </form>
 
 </div>
+
+<script>
+// Función para permitir solo letras
+function soloLetras(event) {
+    const key = event.key;
+    const keyCode = event.keyCode;
+    
+    // Permitir teclas de control
+    if (keyCode === 8 || keyCode === 9 || keyCode === 13 || keyCode === 46 || 
+        keyCode === 37 || keyCode === 39 || keyCode === 36 || keyCode === 35) {
+        return true;
+    }
+    
+    // Permitir tecla espacio
+    if (keyCode === 32) {
+        return true;
+    }
+    
+    // Permitir solo letras
+    const letrasPermitidas = /^[A-Za-zÁÉÍÓÚáéíóúÑñ]$/;
+    
+    if (letrasPermitidas.test(key)) {
+        return true;
+    }
+    
+    event.preventDefault();
+    return false;
+}
+
+// Función para generar email mediante AJAX
+let timeoutId;
+function actualizarEmail() {
+    // Limpiar timeout anterior
+    if (timeoutId) {
+        clearTimeout(timeoutId);
+    }
+    
+    // Obtener valores
+    const nombre = document.getElementById('nom_usuario').value.trim();
+    const ap1 = document.getElementById('ap1').value.trim();
+    const ap2 = document.getElementById('ap2').value.trim();
+    
+    // Mostrar spinner
+    document.getElementById('emailSpinner').style.display = 'flex';
+    document.getElementById('emailHelp').innerHTML = 'Generando correo...';
+    
+    // Esperar 300ms después de que el usuario deje de escribir
+    timeoutId = setTimeout(function() {
+        // Hacer petición AJAX
+        fetch(`{% url 'generar_email_preview' %}?nom_usuario=${encodeURIComponent(nombre)}&ap1=${encodeURIComponent(ap1)}&ap2=${encodeURIComponent(ap2)}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('email_preview').value = data.email;
+                document.getElementById('emailHelp').innerHTML = '✓ Correo generado automáticamente';
+                document.getElementById('emailHelp').style.color = '#198754';
+            } else {
+                document.getElementById('email_preview').value = '';
+                document.getElementById('emailHelp').innerHTML = 'Error al generar correo';
+                document.getElementById('emailHelp').style.color = '#dc3545';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('email_preview').value = '';
+            document.getElementById('emailHelp').innerHTML = 'Error al generar correo';
+            document.getElementById('emailHelp').style.color = '#dc3545';
+        })
+        .finally(() => {
+            // Ocultar spinner
+            document.getElementById('emailSpinner').style.display = 'none';
+            // Restaurar color después de 2 segundos
+            setTimeout(() => {
+                if (document.getElementById('email_preview').value) {
+                    document.getElementById('emailHelp').innerHTML = 'El correo se genera automáticamente mientras escribes';
+                    document.getElementById('emailHelp').style.color = '#6c757d';
+                }
+            }, 2000);
+        });
+    }, 300);
+}
+
+// Asignar eventos a los campos
+document.getElementById('nom_usuario').addEventListener('input', function() {
+    // Limpiar caracteres no permitidos
+    this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    actualizarEmail();
+});
+
+document.getElementById('ap1').addEventListener('input', function() {
+    this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    actualizarEmail();
+});
+
+document.getElementById('ap2').addEventListener('input', function() {
+    this.value = this.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    actualizarEmail();
+});
+
+// Generar email inicial si hay valores precargados
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('nom_usuario').value || 
+        document.getElementById('ap1').value || 
+        document.getElementById('ap2').value) {
+        actualizarEmail();
+    }
+});
+</script>
 
 </body>
 </html>

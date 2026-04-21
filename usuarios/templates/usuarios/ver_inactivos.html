@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Usuarios Inactivos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  background: #f1f1f1;
+}
+
+.sidebar {
+  width: 220px;
+  height: 100vh;
+  background: #2f2f2f;
+  color: white;
+  position: fixed;
+  padding: 20px;
+}
+
+.sidebar a {
+  display: block;
+  color: white;
+  text-decoration: none;
+  margin: 10px 0;
+}
+
+.content {
+  margin-left: 240px;
+  padding: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h5>Dashboard</h5>
+
+  <a href="{% url 'dashboard_admin' %}" style="color:#ffc107;">
+     Regresar
+  </a>
+
+  <hr>
+
+  <a href="{% url 'logout' %}">Cerrar sesión</a>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <h4>Usuarios Inactivos</h4>
+
+  <table class="table table-bordered table-hover bg-white">
+
+    <thead>
+      <tr>
+        <th>Usuario</th>
+        <th>Email</th>
+        <th>Rol</th>
+        <th>Estado</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      {% if usuarios_inactivos %}
+
+        {% for u in usuarios_inactivos %}
+        <tr>
+
+          <td>{{ u.nom_usuario }} {{ u.ap1 }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.rol.nom_rol }}</td>
+
+          <td>
+            <span class="badge bg-danger">Inactivo</span>
+          </td>
+
+          <!-- TOGGLE EN MISMO VIEW -->
+          <td>
+            <form method="POST">
+              {% csrf_token %}
+
+              <input type="hidden" name="id" value="{{ u.id }}">
+
+              <button class="btn btn-sm btn-success">
+                Activar
+              </button>
+
+            </form>
+          </td>
+
+        </tr>
+        {% endfor %}
+
+      {% else %}
+
+        <tr>
+          <td colspan="5" class="text-center text-muted">
+            No hay usuarios inactivos
+          </td>
+        </tr>
+
+      {% endif %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+</body>
+</html>

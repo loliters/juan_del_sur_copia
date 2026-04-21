@@ -47,9 +47,15 @@ body {
   <h5>Dashboard</h5>
 
   <a href="#">Inicio</a>
-  <a href="#">Gestión de Usuarios</a>
-  <a href="#">Productos</a>
+  <a href="{% url 'dashboard_admin' %}">Gestión de Usuarios</a>
+  <a href="{% url 'productos:inventario' %}">Productos</a>
+  <a href="{% url 'categorias:lista' %}">Categorías</a>
+  <a href="{% url 'proveedores:lista' %}">Proveedores</a>
   <a href="#">Reportes</a>
+
+  <a href="{% url 'ver_inactivos' %}">
+    Ver inactivos
+  </a>
 
   <hr>
 
@@ -68,11 +74,12 @@ body {
   <table class="table table-bordered">
     <thead>
       <tr>
-        <th>ID</th>
+        <th hidden>ID</th>
         <th>Usuario</th>
         <th>Email</th>
         <th>Rol</th>
         <th>Estado</th>
+        <th>Fecha creación</th>
         <th>Acciones</th>
       </tr>
     </thead>
@@ -80,10 +87,14 @@ body {
     <tbody>
       {% for u in usuarios %}
       <tr>
-        <td>{{ u.id }}</td>
+
+        <!-- ID oculto -->
+        <td hidden>{{ u.id }}</td>
+
         <td>{{ u.nom_usuario }}</td>
         <td>{{ u.email }}</td>
         <td>{{ u.rol.nom_rol }}</td>
+
         <td>
           {% if u.estado %}
             Activo
@@ -91,11 +102,18 @@ body {
             Inactivo
           {% endif %}
         </td>
+
         <td>
-          <a href="{% url 'modificar_usuario' u.id %}" class="btn btn-sm btn-warning">✏</a>
+          {{ u.fecha_creacion|date:"Y-m-d H:i" }}
+        </td>
+
+        <td>
+          <a href="{% url 'modify' u.id %}" class="btn btn-sm btn-warning">✏</a>
           <a href="{% url 'eliminar_usuario' u.id %}" class="btn btn-sm btn-danger"
              onclick="return confirm('¿Eliminar usuario?')">🗑</a>
         </td>
+        
+
       </tr>
       {% endfor %}
     </tbody>

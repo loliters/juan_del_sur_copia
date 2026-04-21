@@ -97,6 +97,12 @@
     background: #5a6268;
     color: white;
   }
+
+  .codigo-generado {
+    background: #e9ecef;
+    font-family: monospace;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
@@ -106,43 +112,58 @@
     <h4><i class="fas fa-plus-circle me-2" style="color:#0671B8;"></i> Crear Nuevo Producto</h4>
   </div>
   <div class="card-body">
-    <form method="POST">
+    <form method="POST" id="productoForm">
       {% csrf_token %}
       
       <div class="mb-3">
+        <label class="form-label">Código del Producto</label>
+        <input type="text" name="codProducto" id="codProducto" class="form-control codigo-generado" readonly style="background:#e9ecef; font-weight:bold;">
+        <small class="text-muted">Se generará automáticamente</small>
+      </div>
+
+      <div class="mb-3">
         <label class="form-label">Nombre del Producto</label>
-        <input type="text" name="nombre" id="prodNombre" class="form-control" placeholder="Ej: Coca Cola 2L" required>
+        <input type="text" name="nomProducto" id="prodNombre" class="form-control" placeholder="Ej: Coca Cola" required>
       </div>
       
       <div class="mb-3">
         <label class="form-label">Categoría</label>
         <select name="categoria" id="prodCategoria" class="form-select" required>
+          <option value="">Seleccione una categoría</option>
           {% for cat in categorias %}
-            <option value="{{ cat }}">{{ cat }}</option>
+            <option value="{{ cat.id }}">{{ cat.nomCategoria }}</option>
           {% endfor %}
         </select>
       </div>
       
       <div class="mb-3">
         <label class="form-label">Precio de Compra (USD)</label>
-        <input type="number" name="precio_compra" id="prodPrecioCompra" class="form-control" placeholder="Precio de compra" step="0.01" required>
+        <input type="number" name="precioCompra" id="prodPrecioCompra" class="form-control" placeholder="Precio de compra" step="0.01" required>
       </div>
       
       <div class="mb-3">
         <label class="form-label">Precio de Venta (USD)</label>
-        <input type="number" name="precio_venta" id="prodPrecioVenta" class="form-control" placeholder="Precio de venta" step="0.01" required>
+        <input type="number" name="precioVenta" id="prodPrecioVenta" class="form-control" placeholder="Precio de venta" step="0.01" required>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Tipo de Unidad</label>
+        <select name="tipoUnidad" id="prodTipoUnidad" class="form-select" required>
+          {% for und in unidades %}
+            <option value="{{ und }}">{{ und }}</option>
+          {% endfor %}
+        </select>
       </div>
       
       <div class="mb-4">
         <label class="form-label">Stock Inicial</label>
-        <input type="number" name="stock" id="prodStock" class="form-control" placeholder="Cantidad en inventario" step="1" required>
+        <input type="number" name="stockActual" id="prodStock" class="form-control" placeholder="Cantidad en inventario" step="1" required>
       </div>
       
       <button type="submit" class="btn-crear">
         <i class="fas fa-save me-2"></i> Guardar Producto
       </button>
       
-      <!-- Opción 3: Usar un enlace como botón (más simple) -->
       <a href="{% url 'productos:inventario' %}" class="btn-cancelar">
         <i class="fas fa-arrow-left me-2"></i> Cancelar
       </a>
@@ -151,16 +172,167 @@
 </div>
 
 <script>
-  // Validación adicional en cliente
-  document.querySelector('form').addEventListener('submit', function(e) {
+  // Función para abreviar el tipo de unidad
+  function abreviarUnidad(unidad) {
+    const abreviaciones = {
+        'Litros': 'LTS',
+        'Kilos': 'KG',
+        'Gramos': 'GR',
+        'Paquete': 'PAQ',
+        'Bolsa': 'BOL',
+        'General': 'GRAL'
+    };
+    return abreviaciones[unidad] || unidad.substring(0, 3).toUpperCase();
+  }
+
+  // Función para abreviar el nombre del producto
+  function abreviarNombre(nombre) {
+    if (!nombre) return '';
+    
+    // Tomar primeras 3-4 letras según el nombre
+    let nombreLimpio = nombre.trim().toUpperCase();
+    
+    // Eliminar palabras comunes
+    nombreLimpio = nombreLimpio.replace(/COCA\s*/g, 'CC');
+    nombreLimpio = nombreLimpio.replace(/COLA\s*/g, 'CL');
+    
+    // Tomar las primeras 3-4 letras significativas
+    let palabras = nombreLimpio.split(' ');
+    if (palabras.length >= 2) {
+        // Tomar primera letra de primera palabra + primeras 2 letras de segunda palabra
+        return (palabras[0].substring(0, 2) + palabras[1].substring(0, 2)).toUpperCase();
+    } else {
+        return nombreLimpio.substring(0, 4);
+    }
+  }
+
+  // Función para obtener el próximo ID (simulado, se actualizará desde el backend)
+  function obtenerProximoId() {
+    // Esta función hará una petición AJAX para obtener el próximo ID
+    // Por ahora, retorna un número aleatorio para demostración
+    return fetch('/productos/proximo-id/')
+        .then(response => response.json())
+        .then(data => data.proximo_id)
+        .catch(() => {
+            // Fallback: generar ID basado en timestamp
+            return Math.floor(Math.random() * 1000);
+        });
+  }
+
+  // Función principal para generar el código
+  function generarCodigo() {
+    let nombre = document.getElementById('prodNombre').value;
+    let unidadSelect = document.getElementById('prodTipoUnidad');
+    let unidad = unidadSelect.options[unidadSelect.selectedIndex].text;
+    
+    if (!nombre || !unidad) {
+        document.getElementById('codProducto').value = '';
+        return;
+    }
+    
+    // Abreviar nombre y unidad
+    let nombreAbrev = abreviarNombre(nombre);
+    let unidadAbrev = abreviarUnidad(unidad);
+    
+    // Obtener el ID (esto debería venir del backend)
+    // Por ahora usamos un ID temporal que se reemplazará en el backend
+    let idTemp = Math.floor(Math.random() * 1000);
+    
+    // Formatear ID con 3 dígitos (001, 002, etc.)
+    let idFormateado = String(idTemp).padStart(3, '0');
+    
+    // Generar código final
+    let codigo = `${nombreAbrev}_${unidadAbrev}_${idFormateado}`;
+    
+    document.getElementById('codProducto').value = codigo;
+  }
+
+  // Generar código en tiempo real al escribir o cambiar unidad
+  document.getElementById('prodNombre').addEventListener('input', generarCodigo);
+  document.getElementById('prodTipoUnidad').addEventListener('change', generarCodigo);
+  
+  // Validación de precios y generación final del código
+  document.getElementById('productoForm').addEventListener('submit', function(e) {
     let precioCompra = parseFloat(document.getElementById('prodPrecioCompra').value);
     let precioVenta = parseFloat(document.getElementById('prodPrecioVenta').value);
     
     if (precioVenta <= precioCompra) {
       e.preventDefault();
       alert('⚠️ El precio de venta debe ser mayor al precio de compra para tener ganancia');
+      return false;
+    }
+    
+    // Generar código final antes de enviar
+    let nombre = document.getElementById('prodNombre').value;
+    let unidadSelect = document.getElementById('prodTipoUnidad');
+    let unidad = unidadSelect.options[unidadSelect.selectedIndex].text;
+    
+    if (nombre && unidad) {
+        let nombreAbrev = abreviarNombre(nombre);
+        let unidadAbrev = abreviarUnidad(unidad);
+        
+        // Hacer una petición AJAX para obtener el próximo ID real
+        fetch('/productos/proximo-id/')
+            .then(response => response.json())
+            .then(data => {
+                let idFormateado = String(data.proximo_id).padStart(3, '0');
+                let codigoFinal = `${nombreAbrev}_${unidadAbrev}_${idFormateado}`;
+                document.getElementById('codProducto').value = codigoFinal;
+                
+                // Continuar con el envío del formulario
+                e.target.submit();
+            })
+            .catch(error => {
+                console.error('Error al obtener ID:', error);
+                // Si hay error, continuar con el envío usando el código actual
+                e.target.submit();
+            });
+        
+        e.preventDefault(); // Prevenir envío hasta obtener el ID
+        return false;
+    }
+  });
+
+  // Generar código inicial si hay valores por defecto
+  window.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('prodNombre').value) {
+        generarCodigo();
     }
   });
 </script>
+
+<!-- Versión simplificada si no quieres AJAX: el backend generará el código -->
+<script>
+// Versión alternativa: El código se generará en el backend después de guardar
+// Esta versión muestra un código temporal y el backend lo reemplaza
+
+function generarCodigoTemporal() {
+    let nombre = document.getElementById('prodNombre').value;
+    let unidadSelect = document.getElementById('prodTipoUnidad');
+    let unidad = unidadSelect.options[unidadSelect.selectedIndex].text;
+    
+    if (!nombre || !unidad) {
+        document.getElementById('codProducto').value = '';
+        return;
+    }
+    
+    let nombreAbrev = abreviarNombre(nombre);
+    let unidadAbrev = abreviarUnidad(unidad);
+    
+    // Usar timestamp como ID temporal
+    let idTemp = Math.floor(Math.random() * 1000);
+    let idFormateado = String(idTemp).padStart(3, '0');
+    let codigo = `${nombreAbrev}_${unidadAbrev}_${idFormateado}`;
+    
+    document.getElementById('codProducto').value = codigo;
+}
+
+// Reemplazar los event listeners
+document.getElementById('prodNombre').removeEventListener('input', generarCodigo);
+document.getElementById('prodTipoUnidad').removeEventListener('change', generarCodigo);
+document.getElementById('prodNombre').addEventListener('input', generarCodigoTemporal);
+document.getElementById('prodTipoUnidad').addEventListener('change', generarCodigoTemporal);
+</script>
+
 </body>
 </html>

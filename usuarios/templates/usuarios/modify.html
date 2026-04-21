@@ -5,6 +5,7 @@
   <title>Modificar Usuario</title>
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
     body {
@@ -22,54 +23,249 @@
       padding: 30px;
       border-radius: 12px;
     }
+
+    .spinner-border-sm {
+      width: 1rem;
+      height: 1rem;
+      border-width: 0.2em;
+    }
   </style>
 </head>
 
 <body>
 
-{% if user.is_authenticated and user.is_superuser %}
-
 <div class="card-form">
 
-  <h5>Modificar Usuario</h5>
+  <h5 class="mb-3">Modificar Usuario</h5>
 
-  <form method="POST">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="POST" id="editForm">
     {% csrf_token %}
 
+    <!-- Nombre (EDITABLE ahora) -->
     <div class="mb-3">
       <label>Nombre</label>
-      <input type="text" name="nombre" class="form-control" value="{{ usuario.username }}">
+      <input type="text" 
+             name="nom_usuario" 
+             id="nom_usuario"
+             class="form-control" 
+             value="{{ usuario.nom_usuario }}"
+             onkeypress="return soloLetras(event)"
+             onpaste="return false">
     </div>
 
+    <!-- Apellido 1 (EDITABLE ahora) -->
     <div class="mb-3">
-      <label>Email</label>
-      <input type="email" name="email" class="form-control" value="{{ usuario.email }}">
+      <label>Primer Apellido</label>
+      <input type="text" 
+             name="ap1" 
+             id="ap1"
+             class="form-control" 
+             value="{{ usuario.ap1 }}"
+             onkeypress="return soloLetras(event)"
+             onpaste="return false">
     </div>
 
+    <!-- Apellido 2 (EDITABLE ahora) -->
+    <div class="mb-3">
+      <label>Segundo Apellido</label>
+      <input type="text" 
+             name="ap2" 
+             id="ap2"
+             class="form-control" 
+             value="{{ usuario.ap2 }}"
+             onkeypress="return soloLetras(event)"
+             onpaste="return false">
+    </div>
+
+    <!-- Email (generado automáticamente) -->
+    <div class="mb-3">
+      <label>Correo empresarial</label>
+      <div class="input-group">
+        <input type="email" 
+               id="email_preview" 
+               name="email"
+               class="form-control" 
+               readonly
+               value="{{ usuario.email }}"
+               autocomplete="off">
+        <div class="input-group-text" id="emailSpinner" style="display: none;">
+          <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Generando...</span>
+          </div>
+        </div>
+      </div>
+      <small class="text-muted" id="emailHelp">
+        El correo se genera automáticamente al modificar nombre o apellidos
+      </small>
+    </div>
+
+    <!-- Rol (EDITABLE) -->
     <div class="mb-3">
       <label>Rol</label>
       <select name="rol" class="form-select">
-        <option value="Admin">Admin</option>
-        <option value="Cajero">Cajero</option>
+        {% for r in roles %}
+          <option value="{{ r.id }}" {% if usuario.rol.id == r.id %}selected{% endif %}>
+            {{ r.nom_rol }}
+          </option>
+        {% endfor %}
       </select>
     </div>
 
-    <button class="btn btn-primary w-100">
-      Guardar
+    <!-- Estado (EDITABLE) -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <label class="mb-0">Activo</label>
+      <input type="checkbox" name="estado" {% if usuario.estado %}checked{% endif %}>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">
+      Guardar cambios
     </button>
 
   </form>
 
 </div>
 
-{% else %}
-
 <script>
-  alert("Acceso denegado");
-  window.location.href = "{% url 'login' %}";
-</script>
+// Función para permitir solo letras
+function soloLetras(event) {
+    const key = event.key;
+    const keyCode = event.keyCode;
+    
+    // Permitir teclas de control
+    if (keyCode === 8 || keyCode === 9 || keyCode === 13 || keyCode === 46 || 
+        keyCode === 37 || keyCode === 39 || keyCode === 36 || keyCode === 35) {
+        return true;
+    }
+    
+    // Permitir tecla espacio
+    if (keyCode === 32) {
+        return true;
+    }
+    
+    // Permitir solo letras
+    const letrasPermitidas = /^[A-Za-zÁÉÍÓÚáéíóúÑñ]$/;
+    
+    if (letrasPermitidas.test(key)) {
+        return true;
+    }
+    
+    event.preventDefault();
+    return false;
+}
 
-{% endif %}
+// Función para generar email mediante AJAX
+let timeoutId;
+function actualizarEmail() {
+    // Limpiar timeout anterior
+    if (timeoutId) {
+        clearTimeout(timeoutId);
+    }
+    
+    // Obtener valores
+    const nombre = document.getElementById('nom_usuario').value.trim();
+    const ap1 = document.getElementById('ap1').value.trim();
+    const ap2 = document.getElementById('ap2').value.trim();
+    
+    // Mostrar spinner
+    document.getElementById('emailSpinner').style.display = 'flex';
+    document.getElementById('emailHelp').innerHTML = 'Generando correo...';
+    document.getElementById('emailHelp').style.color = '#6c757d';
+    
+    // Esperar 300ms después de que el usuario deje de escribir
+    timeoutId = setTimeout(function() {
+        // Hacer petición AJAX
+        fetch(`{% url 'generar_email_preview' %}?nom_usuario=${encodeURIComponent(nombre)}&ap1=${encodeURIComponent(ap1)}&ap2=${encodeURIComponent(ap2)}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('email_preview').value = data.email;
+                document.getElementById('emailHelp').innerHTML = '✓ Correo generado automáticamente';
+                document.getElementById('emailHelp').style.color = '#198754';
+            } else {
+                document.getElementById('email_preview').value = '';
+                document.getElementById('emailHelp').innerHTML = 'Error al generar correo';
+                document.getElementById('emailHelp').style.color = '#dc3545';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('email_preview').value = '';
+            document.getElementById('emailHelp').innerHTML = 'Error al generar correo';
+            document.getElementById('emailHelp').style.color = '#dc3545';
+        })
+        .finally(() => {
+            // Ocultar spinner
+            document.getElementById('emailSpinner').style.display = 'none';
+            // Restaurar mensaje después de 2 segundos
+            setTimeout(() => {
+                if (document.getElementById('email_preview').value) {
+                    document.getElementById('emailHelp').innerHTML = 'El correo se genera automáticamente al modificar nombre o apellidos';
+                    document.getElementById('emailHelp').style.color = '#6c757d';
+                }
+            }, 2000);
+        });
+    }, 300);
+}
+
+// Función para limpiar los campos de caracteres no permitidos
+function limpiarCampo(input) {
+    input.value = input.value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+}
+
+// Asignar eventos a los campos
+document.getElementById('nom_usuario').addEventListener('input', function() {
+    limpiarCampo(this);
+    actualizarEmail();
+});
+
+document.getElementById('ap1').addEventListener('input', function() {
+    limpiarCampo(this);
+    actualizarEmail();
+});
+
+document.getElementById('ap2').addEventListener('input', function() {
+    limpiarCampo(this);
+    actualizarEmail();
+});
+
+// También actualizar email cuando se pegue texto (solo letras permitidas)
+document.getElementById('nom_usuario').addEventListener('paste', function(e) {
+    e.preventDefault();
+    let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    pastedText = pastedText.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    this.value = pastedText;
+    actualizarEmail();
+});
+
+document.getElementById('ap1').addEventListener('paste', function(e) {
+    e.preventDefault();
+    let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    pastedText = pastedText.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    this.value = pastedText;
+    actualizarEmail();
+});
+
+document.getElementById('ap2').addEventListener('paste', function(e) {
+    e.preventDefault();
+    let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+    pastedText = pastedText.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    this.value = pastedText;
+    actualizarEmail();
+});
+</script>
 
 </body>
 </html>
