@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Editar Proveedor</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<style>
+body {
+  background:#2B2D33;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100vh;
+  font-family:'Segoe UI', system-ui, sans-serif;
+}
+
+/* CARD */
+.card-custom {
+  width:420px;
+  background:#EAEAEA;
+  border-radius:28px;
+  box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);
+  overflow:hidden;
+}
+
+/* HEADER */
+.card-header {
+  background:#E0E0E0;
+  padding:20px 24px;
+  border-bottom:3px solid #0671B8;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.card-header h4 {
+  margin:0;
+  font-weight:700;
+  color:#1F1F1F;
+}
+
+/* BODY */
+.card-body {
+  padding:24px;
+}
+
+/* INPUTS */
+.form-control {
+  border-radius:16px;
+  padding:10px 14px;
+}
+
+.form-control:focus {
+  border-color:#0671B8;
+  box-shadow:0 0 0 3px rgba(6,113,184,0.2);
+}
+
+/* BOTONES */
+.btn-guardar {
+  background:#FFC107;
+  border:none;
+  border-radius:40px;
+  padding:12px;
+  font-weight:600;
+  width:100%;
+}
+
+.btn-guardar:hover {
+  background:#e0a800;
+}
+
+.btn-cancelar {
+  background:#6C757D;
+  border:none;
+  border-radius:40px;
+  padding:12px;
+  font-weight:600;
+  width:100%;
+  color:white;
+  margin-top:10px;
+  text-decoration:none;
+  display:inline-block;
+  text-align:center;
+}
+
+.btn-cancelar:hover {
+  background:#5a6268;
+  color:white;
+}
+
+.btn-volver {
+  background:#6C757D;
+  border:none;
+  border-radius:40px;
+  padding:6px 14px;
+  color:white;
+  font-weight:600;
+  text-decoration:none;
+}
+
+.btn-volver:hover {
+  background:#5a6268;
+  color:white;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="card-custom">
+
+  <!-- HEADER -->
+  <div class="card-header">
+    <h4>
+      <i class="fas fa-edit me-2" style="color:#0671B8;"></i>
+      Editar Proveedor
+    </h4>
+
+    <!-- VOLVER AL MENU -->
+    <a href="{% url 'dashboard_admin' %}" class="btn-volver">
+      <i class="fas fa-arrow-left"></i>
+    </a>
+  </div>
+
+  <!-- BODY -->
+  <div class="card-body">
+
+    <!-- MENSAJES -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}success{% endif %} alert-dismissible fade show">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+      {% csrf_token %}
+
+      <input name="nomProv" class="form-control mb-2" value="{{ proveedor.nomProv }}" placeholder="Nombre" required>
+      <input name="email" class="form-control mb-2" value="{{ proveedor.email }}" placeholder="Email">
+      <input name="telefono" class="form-control mb-2" value="{{ proveedor.telefono }}" placeholder="Teléfono">
+      <input name="direccion" class="form-control mb-3" value="{{ proveedor.direccion }}" placeholder="Dirección" required>
+
+      <button class="btn-guardar">
+        <i class="fas fa-save me-2"></i> Actualizar
+      </button>
+
+      <a href="{% url 'proveedores:lista' %}" class="btn-cancelar">
+        Cancelar
+      </a>
+
+    </form>
+
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

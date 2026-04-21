@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Categorías Eliminadas</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<style>
+body {
+  background:#2B2D33;
+  font-family:'Segoe UI', system-ui, sans-serif;
+}
+
+/* WRAPPER */
+.content-wrapper {
+  padding:20px;
+}
+
+/* CARD */
+.card-custom {
+  background:#EAEAEA;
+  border-radius:28px;
+  box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);
+  overflow:hidden;
+}
+
+/* HEADER */
+.card-header {
+  background:#E0E0E0;
+  padding:20px 24px;
+  border-bottom:3px solid #6C757D;
+}
+
+.card-header h4 {
+  margin:0;
+  font-weight:700;
+  color:#1F1F1F;
+}
+
+/* BODY */
+.card-body {
+  padding:24px;
+}
+
+/* TABLA */
+.table {
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+/* BOTONES */
+.btn-recuperar {
+  background:#198754;
+  border:none;
+  border-radius:40px;
+  padding:6px 14px;
+  color:white;
+  font-weight:600;
+}
+
+.btn-recuperar:hover {
+  background:#157347;
+}
+
+.btn-volver {
+  background:#6C757D;
+  border:none;
+  border-radius:40px;
+  padding:10px 18px;
+  color:white;
+  font-weight:600;
+  text-decoration:none;
+}
+
+.btn-volver:hover {
+  background:#5a6268;
+}
+
+/* ICONOS */
+.icon-recuperar {
+  color:#198754;
+}
+
+.icon-recuperar:hover {
+  color:#157347;
+}
+</style>
+</head>
+
+<body>
+
+<div class="content-wrapper">
+
+  <div class="card-custom">
+
+    <!-- HEADER -->
+    <div class="card-header d-flex justify-content-between align-items-center">
+
+      <h4>
+        <i class="fas fa-archive me-2" style="color:#6C757D;"></i>
+        Categorías Eliminadas
+      </h4>
+
+      <a href="{% url 'categorias:lista' %}" class="btn-volver">
+        <i class="fas fa-arrow-left me-2"></i> Volver
+      </a>
+
+    </div>
+
+    <!-- BODY -->
+    <div class="card-body">
+
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th class="text-center">Acción</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for cat in categorias %}
+            <tr>
+              <td>{{ cat.id }}</td>
+              <td class="fw-semibold">{{ cat.nomCategoria }}</td>
+              <td class="text-center">
+
+                <a href="{% url 'categorias:recuperar' cat.id %}" class="btn-recuperar">
+                  <i class="fas fa-undo me-1"></i> Recuperar
+                </a>
+
+              </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center">
+                <i class="fas fa-inbox me-2"></i>
+                No hay categorías eliminadas
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>
