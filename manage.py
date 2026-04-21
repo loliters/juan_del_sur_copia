@@ -6,7 +6,13 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    # FORZAR SQLITE - SOBREESCRIBIR CUALQUIER CONFIGURACIÓN
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sistema.settings')
+    
+    # ANTES DE IMPORTAR DJANGO, FORZAMOS LA VARIABLE DE ENTORNO
+    # para que use SQLITE aunque el settings.py diga otra cosa
+    os.environ.setdefault('DB_ENGINE', 'sqlite3')
+    
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -15,6 +21,17 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    
+    # MODIFICAR LA CONFIGURACIÓN DESPUÉS DE IMPORTAR PERO ANTES DE EJECUTAR
+    from django.conf import settings
+    if hasattr(settings, 'DATABASES'):
+        settings.DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': os.path.join(os.path.dirname(__file__), 'db.sqlite3'),
+            }
+        }
+    
     execute_from_command_line(sys.argv)
 
 
