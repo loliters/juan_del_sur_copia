@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clientes Eliminados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {% load static %}
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Iconos -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #f5f6f8;
+      padding: 30px;
+    }
+
+    .card {
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      background: white;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    table th, table td {
+      font-size: 0.85rem;
+      vertical-align: middle;
+    }
+
+    .btn-recuperar {
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h6><i class="bi bi-person"></i> Clientes Eliminados</h6>
+
+    <a href="{% url 'clientes_lista' %}" class="btn btn-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Caja
+    </a>
+  </div>
+
+  <!-- TABLA -->
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Nombre</th>
+          <th>Razón social</th>
+          <th>Carnet</th>
+          <th>Correo</th>
+          <th>Teléfono</th>
+          <th>Zona</th>
+          <th>Calle</th>
+          <th># de casa</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for c in clientes %}
+        <tr>
+          <td>{{ c.nombre }}</td>
+          <td>{{ c.razonSocial }}</td>
+          <td>{{ c.carnet }}</td>
+          <td>{{ c.email }}</td>
+          <td>{{ c.telefono }}</td>
+          <td>{{ c.zona }}</td>
+          <td>{{ c.calle }}</td>
+          <td>{{ c.numeroCasa }}</td>
+
+          <td>
+            <a href="{% url 'recuperar_cliente' c.id %}" class="btn btn-success btn-sm btn-recuperar">
+              <i class="bi bi-arrow-clockwise"></i> Recuperar
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center">No hay clientes eliminados</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+</body>
+</html>

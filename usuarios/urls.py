@@ -15,13 +15,19 @@ urlpatterns = [
     path('dashboard/admin/', views.dashboard_admin, name='dashboard_admin'),
     path('dashboard/cajero/', views.dashboard_cajero, name='dashboard_cajero'),
 
-    #MODIFICAR USUARIO
+    # MODIFICAR USUARIO
     path('modificar/<int:id>/', views.modify, name='modify'),
-    #eliminar
+    
+    # ELIMINAR
     path('eliminar/<int:id>/', views.eliminar_usuario, name='eliminar_usuario'),
-    #inactivos
+    
+    # INACTIVOS
     path('usuarios/inactivos/', views.ver_inactivos, name='ver_inactivos'),
-    #generar email
+    
+    # GENERAR EMAIL
     path('generar-email-preview/', views.generar_email_preview, name='generar_email_preview'),
+    
+  
+    
     
 ]

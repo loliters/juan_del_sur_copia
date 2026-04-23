@@ -19,7 +19,7 @@
     color: #FFFFFF;
   }
   
-  /* HEADER con dos botones */
+  /* HEADER con botones */
   .top-header {
     background: #1F1F1F;
     padding: 20px 30px;
@@ -27,6 +27,7 @@
     justify-content: flex-start;
     align-items: center;
     gap: 15px;
+    flex-wrap: wrap;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
   
@@ -362,6 +363,45 @@
   .hidden {
     display: none !important;
   }
+  
+  /* Estilos para tarjetas de clientes */
+  .cliente-card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-left: 6px solid #0671B8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .btn-small {
+    background: #0671B8;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  
+  .btn-small-danger {
+    background: #DC3545;
+  }
+  
+  .btn-small-danger:hover {
+    background: #C82333;
+  }
+  
+  .form-control-custom {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    margin-bottom: 15px;
+  }
 </style>
 </head>
 <body>
@@ -382,6 +422,21 @@
 
   <button class="btn-header" id="btnMovimientos" onclick="showMovementsView()">
     <i class="fas fa-exchange-alt me-2"></i>Movimientos
+  </button>
+
+  <!-- Botón Nuevo Cliente 
+  <button class="btn-header" onclick="showNuevoClienteView()">
+    <i class="fas fa-user-plus me-2"></i>Nuevo Cliente
+  </button>-->
+  <!-- dashboard_cajero.html -->
+<!-- usuarios/templates/usuarios/dashboard_cajero.html -->
+<a href="{% url 'registro_cliente' %}" class="btn-header">
+    <i class="fas fa-user-plus me-2"></i>Nuevo Cliente
+</a>
+
+  <!-- Botón Lista Clientes -->
+  <button class="btn-header" onclick="showListaClientesView()">
+    <i class="fas fa-list me-2"></i>Lista Clientes
   </button>
 </div>
 
@@ -437,6 +492,29 @@
   </div>
 </div>
 
+<!-- Vista de Nuevo Cliente -->
+<div class="main-container hidden" id="nuevoClienteView">
+  <div class="productos-section" style="width: 100%;">
+    <h2 class="section-title"><i class="fas fa-user-plus me-2"></i>Registrar Nuevo Cliente</h2>
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; margin: 0 auto;">
+      <input type="text" id="clienteNombre" class="form-control-custom" placeholder="Nombre completo" autocomplete="off">
+      <input type="email" id="clienteEmail" class="form-control-custom" placeholder="Correo electrónico">
+      <input type="tel" id="clienteTelefono" class="form-control-custom" placeholder="Teléfono">
+      <button class="btn-confirm" onclick="guardarCliente()" style="margin-top: 10px;">Guardar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vista de Lista Clientes -->
+<div class="main-container hidden" id="listaClientesView">
+  <div class="productos-section" style="width: 100%;">
+    <h2 class="section-title"><i class="fas fa-users me-2"></i>Lista de Clientes Registrados</h2>
+    <div id="clientesList" style="background: white; border-radius: 12px; padding: 20px; max-height: 60vh; overflow-y: auto;">
+      <!-- Clientes dinámicos -->
+    </div>
+  </div>
+</div>
+
 <!-- Modal de Pago -->
 <div class="modal-overlay" id="paymentModal">
   <div class="payment-modal">
@@ -470,11 +548,13 @@
   ];
   let carrito = [];
   let movimientos = JSON.parse(localStorage.getItem("movimientosGlobal")) || [];
+  let clientes = JSON.parse(localStorage.getItem("clientesSistema")) || [];
 
   function guardarTodo() {
     localStorage.setItem("categoriasSistema", JSON.stringify(categorias));
     localStorage.setItem("productos", JSON.stringify(productos));
     localStorage.setItem("movimientosGlobal", JSON.stringify(movimientos));
+    localStorage.setItem("clientesSistema", JSON.stringify(clientes));
   }
 
   // Renderizar productos
@@ -646,23 +726,116 @@
     }
   }
 
-  // Cambiar vistas
+  // ========== CLIENTES ==========
+  function guardarCliente() {
+    const nombre = document.getElementById('clienteNombre').value.trim();
+    const email = document.getElementById('clienteEmail').value.trim();
+    const telefono = document.getElementById('clienteTelefono').value.trim();
+    
+    if (!nombre) {
+      alert('El nombre del cliente es obligatorio');
+      return;
+    }
+    
+    const nuevoCliente = {
+      id: Date.now(),
+      nombre: nombre,
+      email: email,
+      telefono: telefono,
+      fechaRegistro: new Date().toLocaleString()
+    };
+    
+    clientes.push(nuevoCliente);
+    guardarTodo();
+    
+    // Limpiar formulario
+    document.getElementById('clienteNombre').value = '';
+    document.getElementById('clienteEmail').value = '';
+    document.getElementById('clienteTelefono').value = '';
+    
+    alert(`Cliente "${nombre}" registrado con éxito`);
+    showListaClientesView(); // Cambiar a lista de clientes para ver el registro
+  }
+  
+  function eliminarCliente(id) {
+    if (confirm('¿Eliminar este cliente?')) {
+      clientes = clientes.filter(c => c.id !== id);
+      guardarTodo();
+      renderListaClientes();
+    }
+  }
+  
+  function renderListaClientes() {
+    const container = document.getElementById('clientesList');
+    if (clientes.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No hay clientes registrados</div>';
+      return;
+    }
+    
+    container.innerHTML = clientes.map(cli => `
+      <div class="cliente-card">
+        <div>
+          <strong><i class="fas fa-user-circle me-1"></i> ${escapeHtml(cli.nombre)}</strong><br>
+          <small style="color: #666;"><i class="fas fa-envelope me-1"></i> ${escapeHtml(cli.email || 'No especificado')}</small><br>
+          <small style="color: #666;"><i class="fas fa-phone me-1"></i> ${escapeHtml(cli.telefono || 'No especificado')}</small><br>
+          <small style="color: #999;">Registro: ${cli.fechaRegistro}</small>
+        </div>
+        <button class="btn-small btn-small-danger" onclick="eliminarCliente(${cli.id})">
+          <i class="fas fa-trash-alt me-1"></i>Eliminar
+        </button>
+      </div>
+    `).join('');
+  }
+  
+  // Funciones de cambio de vista
   function showProductsView() {
+    ocultarTodasVistas();
     document.getElementById('productsView').classList.remove('hidden');
-    document.getElementById('movementsView').classList.add('hidden');
     document.getElementById('btnProductos').classList.add('active');
-    document.getElementById('btnMovimientos').classList.remove('active');
     renderProductos();
   }
-
+  
+  function showCategoriasView() {
+    alert('Vista de categorías en desarrollo');
+  }
+  
+  function showProveedoresView() {
+    alert('Vista de proveedores en desarrollo');
+  }
+  
   function showMovementsView() {
-    document.getElementById('productsView').classList.add('hidden');
+    ocultarTodasVistas();
     document.getElementById('movementsView').classList.remove('hidden');
-    document.getElementById('btnProductos').classList.remove('active');
     document.getElementById('btnMovimientos').classList.add('active');
     renderMovements();
   }
-
+  
+  function showNuevoClienteView() {
+    ocultarTodasVistas();
+    document.getElementById('nuevoClienteView').classList.remove('hidden');
+    // Limpiar campos al entrar
+    document.getElementById('clienteNombre').value = '';
+    document.getElementById('clienteEmail').value = '';
+    document.getElementById('clienteTelefono').value = '';
+  }
+  
+  function showListaClientesView() {
+    ocultarTodasVistas();
+    document.getElementById('listaClientesView').classList.remove('hidden');
+    renderListaClientes();
+  }
+  
+  function ocultarTodasVistas() {
+    document.getElementById('productsView').classList.add('hidden');
+    document.getElementById('movementsView').classList.add('hidden');
+    document.getElementById('nuevoClienteView').classList.add('hidden');
+    document.getElementById('listaClientesView').classList.add('hidden');
+    
+    // Remover active de todos los botones
+    const botones = document.querySelectorAll('.btn-header');
+    botones.forEach(btn => btn.classList.remove('active'));
+  }
+  
   // Renderizar movimientos
   function renderMovements() {
     const container = document.getElementById('movementsList');
@@ -686,6 +859,7 @@
   }
 
   function escapeHtml(str) {
+    if (!str) return '';
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
@@ -693,7 +867,7 @@
 
   // Event listeners
   document.getElementById('searchInput').addEventListener('input', renderProductos);
-
+  
   // Inicialización
   function init() {
     renderProductos();

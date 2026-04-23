@@ -26,4 +26,6 @@ urlpatterns = [
     path('categorias/', include('categorias.urls')),
     path('proveedores/', include('proveedores.urls')),
     #path('dashboard/', views.dashboard_admin, name='dashboard_admin')
+    path('clientes/', include('clientes.urls')),
+    
 ]

@@ -1,6 +1,7 @@
 from django.db import models
 from decimal import Decimal
-from categorias.models import Categoria  # CLASE
+from categorias.models import Categoria
+from usuarios.models import Usuario  # 👈 NUEVO
 
 class Producto(models.Model):
 
@@ -47,13 +48,23 @@ class Producto(models.Model):
         default='activo'
     )
 
-    # RELACIÓN 1:N 
+    # RELACIÓN CON CATEGORÍA
     categoria = models.ForeignKey(
         Categoria,
         on_delete=models.CASCADE,
         null=True,
         blank=True
-    )   
+    )
+
+    # 🔥 RELACIÓN CON USUARIO (1 usuario -> muchos productos)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='productos'
+    )
+
     def __str__(self):
         return self.nomProducto
 

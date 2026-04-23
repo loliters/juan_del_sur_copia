@@ -1,9 +1,11 @@
+# usuarios/views.py
 from django.shortcuts import render, redirect
 from django.contrib.auth.hashers import make_password, check_password
 from django.db import IntegrityError
-
 from .models import Usuario, Rol
 
+# ✅ Importar la vista de clientes
+from clientes.views import registro_cliente
 
 # =========================
 # LOGIN
@@ -13,6 +15,8 @@ from django.contrib.auth.hashers import check_password
 from django.contrib import messages
 from .models import Usuario
 import re
+
+
 
 
 def login_view(request):
