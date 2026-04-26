@@ -4,8 +4,8 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.db import IntegrityError
 from .models import Usuario, Rol
 
-# ✅ Importar la vista de clientes
-from clientes.views import registro_cliente
+#  Importar la vista de clientes
+#from clientes.views import registro_cliente
 
 # =========================
 # LOGIN
@@ -83,7 +83,7 @@ def login_view(request):
         request.session['email'] = user.email
 
         # Mensaje de bienvenida
-        messages.success(request, f'✅ ¡Bienvenido {user.nom_usuario}!')
+        messages.success(request, f' ¡Bienvenido {user.nom_usuario}!')
 
         # Redirección por rol
         if rol == "administrador":

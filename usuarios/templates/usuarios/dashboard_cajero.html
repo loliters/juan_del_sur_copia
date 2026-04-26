@@ -430,14 +430,14 @@
   </button>-->
   <!-- dashboard_cajero.html -->
 <!-- usuarios/templates/usuarios/dashboard_cajero.html -->
-<a href="{% url 'registro_cliente' %}" class="btn-header">
+<a href="{% url 'clientes:registro_cliente' %}" class="btn-header">
     <i class="fas fa-user-plus me-2"></i>Nuevo Cliente
 </a>
 
   <!-- Botón Lista Clientes -->
-  <button class="btn-header" onclick="showListaClientesView()">
+  <a href="{% url 'clientes:ver_clientes' %}" class="btn-header">
     <i class="fas fa-list me-2"></i>Lista Clientes
-  </button>
+  </a>
 </div>
 
 <div class="main-container" id="productsView">

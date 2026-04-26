@@ -28,4 +28,5 @@ urlpatterns = [
     #path('dashboard/', views.dashboard_admin, name='dashboard_admin')
     path('clientes/', include('clientes.urls')),
     
+    
 ]

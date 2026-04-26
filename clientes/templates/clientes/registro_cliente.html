@@ -14,26 +14,28 @@
 
   <style>
     body {
-      background-color: #f5f5f5;
+      background-color: #2B2D33;
       height: 100vh;
       margin: 0;
       display: flex;
       justify-content: center;
       align-items: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     .card-form {
       width: 100%;
-      max-width: 420px;
+      max-width: 450px;
       border-radius: 15px;
       padding: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
       background: white;
+      color: black;
     }
 
     .logo {
       max-height: 60px;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
 
     h5 {
@@ -51,127 +53,283 @@
       font-size: 0.9rem;
     }
 
+    .input-group-text {
+      background-color: #f1f1f1;
+      border: none;
+    }
+
     .btn-success {
       font-weight: bold;
+      background-color: #0671B8;
+      border: none;
+    }
+
+    .btn-success:hover {
+      background-color: #055A9A;
     }
 
     .btn-secondary {
       font-weight: bold;
+    }
+
+    .alert {
+      font-size: 0.85rem;
+      margin-bottom: 15px;
+    }
+
+    .alert-danger {
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+
+    .alert-success {
+      background-color: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+
+    small.text-muted {
+      font-size: 0.7rem;
+      display: block;
+      margin-top: 4px;
+    }
+    
+    /* Estilo para campos inválidos */
+    .form-control.is-invalid {
+      border-color: #dc3545;
+      background-image: url("data:image/svg+xml,...");
+    }
+    
+    .form-control.is-valid {
+      border-color: #198754;
     }
   </style>
 </head>
 
 <body>
 
-<div class="card-form text-center">
+<div class="card-form">
 
   <!-- LOGO -->
-  <img src="{% static 'clientes/IMAGES/logoJuanDelSur.jpg' %}" class="logo">
+  <img src="{% static 'clientes/IMAGES/logoJuanDelSur.jpg' %}" class="logo" alt="Logo">
 
-  <h6>Supermercado Juan Del Sur</h6>
-  <small class="text-muted">Sucursal Los Pinos</small>
+  <h6 class="text-center">Supermercado Juan Del Sur</h6>
+  <small class="text-muted text-center d-block">Sucursal Los Pinos</small>
 
-  <h5 class="mt-2">Registrar Nuevo Cliente</h5>
+  <h5 class="mt-2 text-center">Registrar Nuevo Cliente</h5>
 
   <!-- MENSAJES -->
   {% if messages %}
     {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
         {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     {% endfor %}
   {% endif %}
 
   <!-- FORMULARIO -->
-  <form method="POST" autocomplete="off">
+  <form method="POST" action="{% url 'clientes:registro_cliente' %}" autocomplete="off">
     {% csrf_token %}
 
-    <!-- Nombre -->
+    <!-- Nombre (Obligatorio - Solo letras) -->
     <div class="mb-2 text-start">
-      <label>Nombre</label>
+      <label>Nombre <span class="text-danger">*</span></label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-person"></i></span>
-        <input type="text" name="nombre" class="form-control" placeholder="Ingrese nombre del cliente" required>
+        <input type="text" 
+               name="nombre" 
+               class="form-control" 
+               placeholder="Ej: Juan Pérez" 
+               pattern="[A-Za-záéíóúñÁÉÍÓÚÑ\s]+"
+               title="Solo letras y espacios"
+               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, '')"
+               required>
       </div>
+      <small class="text-muted">Solo letras, sin números</small>
     </div>
 
-    <!-- Razón Social -->
+    <!-- Razón Social (Opcional - Solo letras) -->
     <div class="mb-2 text-start">
       <label>Razón Social</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-building"></i></span>
-        <input type="text" name="razonSocial" class="form-control" placeholder="Ingrese la razón social">
+        <input type="text" 
+               name="razonSocial" 
+               class="form-control" 
+               placeholder="Ej: Importadora J&P"
+               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, '')"
+               title="Solo letras y espacios">
       </div>
+      <small class="text-muted">Solo letras, sin números (opcional)</small>
     </div>
 
-    <!-- Carnet -->
+    <!-- Carnet (Opcional - Solo números) -->
     <div class="mb-2 text-start">
       <label>Carnet</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-card-text"></i></span>
-        <input type="text" name="carnet" class="form-control" placeholder="Ingrese el carnet">
+        <input type="text" 
+               name="carnet" 
+               class="form-control" 
+               placeholder="Ej: 1234567"
+               pattern="[0-9]+"
+               title="Solo números"
+               oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+               maxlength="15">
       </div>
+      <small class="text-muted">Solo números (opcional)</small>
     </div>
 
-    <!-- Email -->
+    <!-- Email (Obligatorio - Debe ser único) -->
     <div class="mb-2 text-start">
-      <label>Email</label>
+      <label>Email <span class="text-danger">*</span></label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-        <input type="email" name="email" class="form-control" placeholder="Ingrese el email">
+        <input type="email" 
+               name="email" 
+               class="form-control" 
+               placeholder="Ej: cliente@ejemplo.com" 
+               required>
       </div>
+      <small class="text-muted">Email válido y único en el sistema</small>
     </div>
 
-    <!-- Teléfono -->
+    <!-- Teléfono (Obligatorio - Solo números y único) -->
     <div class="mb-2 text-start">
-      <label>Teléfono</label>
+      <label>Teléfono <span class="text-danger">*</span></label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-        <input type="text" name="telefono" class="form-control" placeholder="Ingrese el teléfono">
+        <input type="text" 
+               name="telefono" 
+               class="form-control" 
+               placeholder="Ej: 71234567" 
+               pattern="[0-9]+"
+               title="Solo números"
+               oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+               maxlength="15"
+               required>
       </div>
+      <small class="text-muted">Solo números, sin espacios ni guiones. Debe ser único</small>
     </div>
 
-    <!-- Zona -->
+    <!-- Zona (Opcional - Solo letras) -->
     <div class="mb-2 text-start">
       <label>Zona</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-        <input type="text" name="zona" class="form-control" placeholder="Ingrese la zona">
+        <input type="text" 
+               name="zona" 
+               class="form-control" 
+               placeholder="Ej: Los Pinos"
+               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, '')"
+               title="Solo letras y espacios">
       </div>
+      <small class="text-muted">Solo letras (opcional)</small>
     </div>
 
-    <!-- Calle -->
+    <!-- Calle (Opcional - Letras y números) -->
     <div class="mb-2 text-start">
       <label>Calle</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-signpost"></i></span>
-        <input type="text" name="calle" class="form-control" placeholder="Ingrese la calle">
+        <input type="text" 
+               name="calle" 
+               class="form-control" 
+               placeholder="Ej: Av. Libertador 123"
+               oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ0-9\s]/g, '')"
+               title="Letras, números y espacios">
       </div>
+      <small class="text-muted">Letras y números (opcional)</small>
     </div>
 
-    <!-- Número de Casa -->
+    <!-- Número de Casa (Opcional - Solo números) -->
     <div class="mb-3 text-start">
       <label>Número de Casa</label>
       <div class="input-group">
         <span class="input-group-text"><i class="bi bi-house"></i></span>
-        <input type="text" name="numeroCasa" class="form-control" placeholder="Ingrese el número de casa">
+        <input type="text" 
+               name="numeroCasa" 
+               class="form-control" 
+               placeholder="Ej: 123"
+               pattern="[0-9]+"
+               title="Solo números"
+               oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+               maxlength="10">
       </div>
+      <small class="text-muted">Solo números (opcional)</small>
     </div>
 
     <!-- BOTONES -->
-    <div class="d-flex justify-content-between">
-      <button type="submit" class="btn btn-success w-50 me-2">
-        Registrar Cliente
+    <div class="d-flex justify-content-between gap-2">
+      <button type="submit" class="btn btn-success w-50">
+        <i class="bi bi-check-circle"></i> Registrar
       </button>
 
-      <a href="#" class="btn btn-secondary w-50">
-        Cancelar
+      <a href="{% url 'dashboard_cajero' %}" class="btn btn-secondary w-50">
+        <i class="bi bi-arrow-left"></i> Cancelar
       </a>
     </div>
 
   </form>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  // Validación adicional antes de enviar
+  document.querySelector('form').addEventListener('submit', function(e) {
+    let nombre = document.querySelector('input[name="nombre"]').value;
+    let razonSocial = document.querySelector('input[name="razonSocial"]').value;
+    let telefono = document.querySelector('input[name="telefono"]').value;
+    let carnet = document.querySelector('input[name="carnet"]').value;
+    let errores = [];
+    
+    // Validar nombre solo letras
+    if (!/^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$/.test(nombre)) {
+      errores.push(' El nombre solo debe contener letras y espacios');
+      document.querySelector('input[name="nombre"]').classList.add('is-invalid');
+    } else {
+      document.querySelector('input[name="nombre"]').classList.remove('is-invalid');
+    }
+    
+    // Validar razón social si tiene contenido
+    if (razonSocial && !/^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$/.test(razonSocial)) {
+      errores.push(' La razón social solo debe contener letras y espacios');
+      document.querySelector('input[name="razonSocial"]').classList.add('is-invalid');
+    }
+    
+    // Validar teléfono solo números
+    if (!/^[0-9]+$/.test(telefono)) {
+      errores.push(' El teléfono solo debe contener números');
+      document.querySelector('input[name="telefono"]').classList.add('is-invalid');
+    } else {
+      document.querySelector('input[name="telefono"]').classList.remove('is-invalid');
+    }
+    
+    // Validar carnet si tiene contenido
+    if (carnet && !/^[0-9]+$/.test(carnet)) {
+      errores.push(' El carnet solo debe contener números');
+      document.querySelector('input[name="carnet"]').classList.add('is-invalid');
+    }
+    
+    // Si hay errores, mostrar y prevenir envío
+    if (errores.length > 0) {
+      e.preventDefault();
+      alert(errores.join('\n'));
+      return false;
+    }
+  });
+  
+  // Quitar clase de error cuando el usuario empieza a escribir
+  document.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', function() {
+      this.classList.remove('is-invalid');
+    });
+  });
+</script>
 
 </body>
 </html>

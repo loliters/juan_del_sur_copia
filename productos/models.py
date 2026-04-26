@@ -1,7 +1,8 @@
+# productos/models.py
 from django.db import models
 from decimal import Decimal
 from categorias.models import Categoria
-from usuarios.models import Usuario  # 👈 NUEVO
+from usuarios.models import Usuario
 
 class Producto(models.Model):
 
@@ -35,7 +36,9 @@ class Producto(models.Model):
         default=Decimal('0.00')
     )
 
-    stockActual = models.IntegerField(default=0)
+    stockActual = models.IntegerField(default=0)  # ← Mantener stockActual
+
+    stockMinimo = models.IntegerField(default=0)  # ← AGREGAR stockMinimo
 
     tipoUnidad = models.CharField(
         max_length=100,
@@ -56,7 +59,7 @@ class Producto(models.Model):
         blank=True
     )
 
-    # 🔥 RELACIÓN CON USUARIO (1 usuario -> muchos productos)
+    # RELACIÓN CON USUARIO
     usuario = models.ForeignKey(
         Usuario,
         on_delete=models.SET_NULL,
