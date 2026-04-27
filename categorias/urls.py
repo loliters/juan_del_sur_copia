@@ -12,4 +12,6 @@ urlpatterns = [
     # opcional
     path('inactivas/', views.lista_inactivas, name='inactivas'),
     path('recuperar/<int:id_categoria>/', views.recuperar_categoria, name='recuperar'),
+
+    path('lista/', views.lista_categorias, name='lista_categorias'),
 ]

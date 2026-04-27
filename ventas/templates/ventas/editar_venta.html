@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Venta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    {% load static %}
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #2B2D33;
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        
+        .card-form {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: white;
+        }
+        
+        .btn-primary {
+            background-color: #0671B8;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background-color: #055A9A;
+        }
+        
+        .alert {
+            font-size: 0.85rem;
+        }
+        
+        .detalle-item {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .badge-metodo {
+            background: #0671B8;
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+<div class="card-form">
+    <h4 class="text-center mb-3">
+        <i class="bi bi-pencil-square text-primary"></i> Editar Venta #{{ venta.id_venta }}
+    </h4>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="mb-3">
+        <label class="form-label"><i class="bi bi-calendar me-1"></i>Fecha</label>
+        <input type="text" class="form-control" value="{{ venta.fecha|date:'d/m/Y H:i' }}" disabled>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label"><i class="bi bi-cart me-1"></i>Productos</label>
+        {% for detalle in detalles %}
+        <div class="detalle-item">
+            <div class="d-flex justify-content-between">
+                <span><strong>{{ detalle.inventario.producto.nomProducto }}</strong></span>
+                <span>x{{ detalle.cantidad }}</span>
+                <span>${{ detalle.subtotal|floatformat:2 }}</span>
+            </div>
+        </div>
+        {% endfor %}
+        <div class="detalle-item bg-primary text-white mt-2">
+            <div class="d-flex justify-content-between">
+                <strong>Total:</strong>
+                <strong>${{ venta.total|floatformat:2 }}</strong>
+            </div>
+        </div>
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label class="form-label"><i class="bi bi-person me-1"></i>Cliente</label>
+            <select name="cliente_id" class="form-select" required>
+                <option value="">Seleccione un cliente</option>
+                {% for cliente in clientes %}
+                <option value="{{ cliente.id_cliente }}" {% if venta.cliente.id_cliente == cliente.id_cliente %}selected{% endif %}>
+                    {{ cliente.nombre }} - {{ cliente.carnet|default:"Sin carnet" }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label"><i class="bi bi-credit-card me-1"></i>Método de Pago</label>
+            <select name="metodo_pago_id" class="form-select" required>
+                <option value="">Seleccione un método</option>
+                {% for mp in metodos_pago %}
+                <option value="{{ mp.id_met_pago }}" {% if venta.metodo_pago.id_met_pago == mp.id_met_pago %}selected{% endif %}>
+                    {{ mp.tipoPago }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary w-50">
+                <i class="bi bi-save"></i> Guardar Cambios
+            </button>
+            <a href="{% url 'ventas:ver_ventas' %}" class="btn btn-secondary w-50">
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

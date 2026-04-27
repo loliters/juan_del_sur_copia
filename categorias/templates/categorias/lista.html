@@ -81,6 +81,7 @@ body {
 .content-wrapper {
   padding:20px;
 }
+
 .btn-volver {
   background: #6C757D;
   border: none;
@@ -95,6 +96,16 @@ body {
 .btn-volver:hover {
   background: #5a6268;
   color: white;
+}
+
+/* Badge para modo solo lectura */
+.badge-solo-lectura {
+  background: #6c757d;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  display: inline-block;
 }
 </style>
 
@@ -115,14 +126,23 @@ body {
         </h4>
         <!-- DERECHA BOTONES -->
         <div class="d-flex gap-2">
-            <!-- BOTÓN VOLVER AL MENÚ -->
-            <a href="{% url 'dashboard_admin' %}" class="btn-volver">
-                <i class="fas fa-arrow-left me-2"></i> Menú
-            </a>
-            <!-- BOTÓN NUEVA CATEGORÍA -->
-            <a href="{% url 'categorias:crear' %}" class="btn-crear">
-                <i class="fas fa-plus me-2"></i> Nueva
-            </a>
+            <!-- BOTÓN VOLVER AL MENÚ (según rol) -->
+            {% if request.session.rol == 'cajero' %}
+                <a href="{% url 'dashboard_cajero' %}" class="btn-volver">
+                    <i class="fas fa-arrow-left me-2"></i> Volver
+                </a>
+            {% else %}
+                <a href="{% url 'dashboard_admin' %}" class="btn-volver">
+                    <i class="fas fa-arrow-left me-2"></i> Menú
+                </a>
+            {% endif %}
+            
+            <!-- BOTÓN NUEVA CATEGORÍA (solo administrador) -->
+            {% if request.session.rol == 'administrador' %}
+                <a href="{% url 'categorias:crear' %}" class="btn-crear">
+                    <i class="fas fa-plus me-2"></i> Nueva
+                </a>
+            {% endif %}
         </div>
     </div>
 
@@ -145,18 +165,22 @@ body {
               <td>{{ cat.id }}</td>
               <td class="fw-semibold">{{ cat.nomCategoria }}</td>
               <td class="text-center">
-
-                <a href="{% url 'categorias:editar' cat.id %}" class="me-2" title="Editar">
-                  <i class="fas fa-edit icon-editar"></i>
-                </a>
-
-                <a href="{% url 'categorias:eliminar' cat.id %}" title="Eliminar">
-                  <i class="fas fa-trash icon-eliminar"></i>
-                </a>
-
+                {% if request.session.rol == 'administrador' %}
+                  <!-- Botones para administrador -->
+                  <a href="{% url 'categorias:editar' cat.id %}" class="me-2" title="Editar">
+                    <i class="fas fa-edit icon-editar"></i>
+                  </a>
+                  <a href="{% url 'categorias:eliminar' cat.id %}" title="Eliminar" onclick="return confirm('¿Eliminar esta categoría?')">
+                    <i class="fas fa-trash icon-eliminar"></i>
+                  </a>
+                {% else %}
+                  <!-- Mensaje para cajeros (solo lectura) -->
+                  <span class="badge-solo-lectura">
+                    <i class="fas fa-eye me-1"></i> Solo lectura
+                  </span>
+                {% endif %}
               </td>
             </tr>
-
             {% empty %}
             <tr>
               <td colspan="3" class="text-center">
@@ -170,11 +194,14 @@ body {
         </table>
       </div>
 
+      <!-- BOTÓN VER ELIMINADAS (solo administrador) -->
+      {% if request.session.rol == 'administrador' %}
       <div class="mt-3">
         <a href="{% url 'categorias:inactivas' %}" class="btn btn-secondary">
           <i class="fas fa-archive me-2"></i> Ver eliminadas
         </a>
       </div>
+      {% endif %}
 
     </div>
   </div>

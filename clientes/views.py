@@ -1,7 +1,9 @@
 # clientes/views.py
-from django.shortcuts import render, redirect
+# clientes/views.py
+from django.shortcuts import render, redirect, get_object_or_404  # ← Agregar get_object_or_404
 from django.contrib import messages
 from .models import Cliente
+from metodopago.models import MetodoPago  # ← Agregar esta importación
 import re
 
 def registro_cliente(request):
@@ -37,8 +39,12 @@ def registro_cliente(request):
             errores = True
         
         # 3. Validar CARNET (solo números, OPCIONAL)
+        # 3. Validar CARNET (solo números, OPCIONAL)
         if carnet and not re.match(r'^[0-9]+$', carnet):
-            messages.error(request, ' El carnet solo debe contener números')
+            messages.error(request, '❌ El carnet solo debe contener números')
+            errores = True
+        elif carnet and Cliente.objects.filter(carnet=carnet).exists():
+            messages.error(request, f'❌ El carnet "{carnet}" ya está registrado por otro cliente')
             errores = True
         
         # 4. Validar EMAIL (formato válido, OBLIGATORIO)
@@ -100,7 +106,7 @@ def registro_cliente(request):
                 calle=calle if calle else '',
                 numeroCasa=numeroCasa if numeroCasa else '',
                 estado=True,
-                metodo_pago=metodo_pago_default
+                
             )
             
             messages.success(request, f'¡Cliente {nombre} registrado exitosamente!')
@@ -179,27 +185,27 @@ def editar_cliente(request, id):
             messages.error(request, 'El teléfono es obligatorio')
             errores = True
         elif not re.match(r'^[0-9]+$', telefono):
-            messages.error(request, '❌ El teléfono solo debe contener números')
+            messages.error(request, ' El teléfono solo debe contener números')
             errores = True
         else:
             # Verificar teléfono no exista en otro cliente
             if Cliente.objects.filter(telefono=telefono).exclude(id_cliente=id).exists():
-                messages.error(request, '❌ Este número de teléfono ya está registrado por otro cliente')
+                messages.error(request, ' Este número de teléfono ya está registrado por otro cliente')
                 errores = True
         
         # Validar ZONA
         if zona and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', zona):
-            messages.error(request, '❌ La zona solo debe contener letras y espacios')
+            messages.error(request, ' La zona solo debe contener letras y espacios')
             errores = True
         
         # Validar CALLE
         if calle and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ0-9\s]+$', calle):
-            messages.error(request, '❌ La calle solo debe contener letras, números y espacios')
+            messages.error(request, 'La calle solo debe contener letras, números y espacios')
             errores = True
         
         # Validar NÚMERO DE CASA
         if numeroCasa and not re.match(r'^[0-9]+$', numeroCasa):
-            messages.error(request, '❌ El número de casa solo debe contener números')
+            messages.error(request, 'El número de casa solo debe contener números')
             errores = True
         
         if errores:
@@ -237,7 +243,7 @@ def eliminar_cliente(request, id):
         messages.success(request, f'✅ Cliente "{nombre}" eliminado exitosamente')
         return redirect('clientes:lista_clientes')
     
-    return render(request, 'clientes/eliminar_cliente.html', {'cliente': cliente})
+    return render(request, 'clientes/eliminar.html', {'cliente': cliente})
 
 
 def clientes_inactivos(request):

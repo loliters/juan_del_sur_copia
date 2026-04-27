@@ -78,19 +78,19 @@
       <h6>Eliminar Cliente</h6>
     </div>
 
-    <a href="{% url 'clientes_lista' %}">
+    <a href="{% url 'clientes:lista_clientes' %}">
       <i class="bi bi-arrow-left-circle"></i>
     </a>
   </div>
 
   <hr>
 
-  <p class="text-center">¿Seguro que deseas eliminar al cliente?</p>
+  <p class="text-center">¿Seguro que deseas eliminar al siguiente cliente?</p>
 
   <!-- DATOS (solo lectura) -->
-  <input type="text" class="form-control" value="{{ cliente.nombre }}" disabled>
-  <input type="text" class="form-control" value="{{ cliente.razonSocial }}" disabled>
-  <input type="text" class="form-control" value="{{ cliente.carnet }}" disabled>
+  <input type="text" class="form-control" value="Nombre: {{ cliente.nombre }}" disabled>
+  <input type="text" class="form-control" value="Razón Social: {{ cliente.razonSocial }}" disabled>
+  <input type="text" class="form-control" value="Carnet: {{ cliente.carnet }}" disabled>
 
   <!-- FORM -->
   <form method="POST">
@@ -102,7 +102,7 @@
     </button>
 
     <!-- CANCELAR -->
-    <a href="{% url 'clientes_lista' %}" class="btn btn-secondary w-100">
+    <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-secondary w-100">
       Cancelar
     </a>
   </form>

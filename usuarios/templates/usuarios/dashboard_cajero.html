@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Cajero Profesional - Juan del Sur</title>
+<title>Cajero - Juan del Sur</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
   * {
     box-sizing: border-box;
@@ -19,7 +20,6 @@
     color: #FFFFFF;
   }
   
-  /* HEADER con botones */
   .top-header {
     background: #1F1F1F;
     padding: 20px 30px;
@@ -40,15 +40,17 @@
     color: white;
     transition: 0.2s;
     cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
   }
   
   .btn-header:hover, .btn-header.active {
     background: #055A9A;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(6,113,184,0.4);
+    color: white;
   }
   
-  /* Layout principal 2 columnas */
   .main-container {
     display: flex;
     gap: 25px;
@@ -57,14 +59,27 @@
     margin: 0 auto;
   }
   
-  /* Columna izquierda - Productos */
   .productos-section {
-    flex: 2;
+    flex: 1;
     background: #F5F5F5;
     border-radius: 20px;
     padding: 25px;
     color: #000;
-    min-height: 70vh;
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .cart-section {
+    flex: 1;
+    min-width: 350px;
+    background: #3A3A3A;
+    border-radius: 20px;
+    padding: 25px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    height: 80vh;
   }
   
   .section-title {
@@ -74,7 +89,6 @@
     color: #000;
   }
   
-  /* Buscador */
   .search-container {
     margin-bottom: 25px;
   }
@@ -96,117 +110,99 @@
     box-shadow: 0 0 0 4px rgba(6,113,184,0.1);
   }
   
-  /* Grid de productos */
-  .products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 20px;
-    max-height: 60vh;
+  .products-list {
+    flex: 1;
     overflow-y: auto;
     padding-right: 10px;
   }
   
-  .product-card {
-    background: #EAEAEA;
-    border-radius: 16px;
-    padding: 18px;
-    border: 1px solid #ddd;
+  .product-item {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-left: 4px solid #0671B8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     transition: 0.2s;
   }
   
-  .product-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  .product-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
+  .product-info {
+    flex: 1;
   }
   
   .product-name {
     font-weight: 700;
     font-size: 1rem;
     color: #000;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   
   .product-price {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     font-weight: 700;
     color: #0671B8;
-    margin-bottom: 5px;
   }
   
   .product-stock {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: #666;
-    margin-bottom: 12px;
   }
   
-  .product-actions {
-    display: flex;
-    gap: 8px;
-  }
-  
-  .btn-edit {
+  .btn-add-cart {
     background: #0671B8;
     color: white;
     border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 0.8rem;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: 0.2s;
   }
   
-  .btn-edit:hover {
+  .btn-add-cart:hover {
     background: #055A9A;
+    transform: scale(1.02);
   }
   
-  .btn-delete {
-    background: #DC3545;
-    color: white;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  
-  .btn-delete:hover {
-    background: #C82333;
-  }
-  
-  /* Columna derecha - Carrito */
-  .cart-section {
-    flex: 1;
-    min-width: 320px;
-    background: #3A3A3A;
-    border-radius: 20px;
-    padding: 25px;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    height: fit-content;
+  .btn-add-cart:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
   }
   
   .cart-title {
     font-size: 1.3rem;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     padding-bottom: 15px;
     border-bottom: 2px solid #555;
+  }
+  
+  .cliente-info {
+    background: #2B2D33;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 15px;
+    text-align: center;
   }
   
   .cart-items {
     flex: 1;
     overflow-y: auto;
-    max-height: 40vh;
     margin-bottom: 20px;
   }
   
   .cart-item {
     background: #2B2D33;
     border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -222,19 +218,35 @@
   }
   
   .cart-item-qty {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: #aaa;
   }
   
   .cart-item-price {
     font-weight: 700;
     color: #6BBF59;
+    text-align: right;
+  }
+  
+  .btn-eliminar {
+    background: #DC3545;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    color: white;
+    margin-top: 5px;
+  }
+  
+  .btn-eliminar:hover {
+    background: #c82333;
   }
   
   .cart-totals {
     background: #2B2D33;
     border-radius: 16px;
-    padding: 18px;
+    padding: 15px;
     margin-bottom: 15px;
   }
   
@@ -254,12 +266,12 @@
   }
   
   .btn-confirm {
-    background: #6BBF59;
+    background: #28a745;
     color: white;
     border: none;
-    padding: 16px;
+    padding: 14px;
     border-radius: 12px;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
@@ -267,11 +279,32 @@
   }
   
   .btn-confirm:hover {
-    background: #5AA84A;
+    background: #218838;
     transform: scale(0.98);
   }
   
-  /* Modal de pago */
+  .btn-confirm:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+  
+  .btn-seleccionar {
+    background: #0671B8;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+  }
+  
+  .btn-seleccionar:hover {
+    background: #055A9A;
+  }
+  
+  /* Modal */
   .modal-overlay {
     position: fixed;
     top: 0;
@@ -283,14 +316,22 @@
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: 0.3s;
+    display: none;
   }
   
   .modal-overlay.active {
-    opacity: 1;
-    visibility: visible;
+    display: flex;
+  }
+  
+  .clientes-modal {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 80vh;
+    overflow-y: auto;
+    color: #000;
   }
   
   .payment-modal {
@@ -300,14 +341,12 @@
     min-width: 400px;
     text-align: center;
     color: #000;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   }
   
   .payment-title {
     font-size: 1.4rem;
     font-weight: 700;
     margin-bottom: 25px;
-    color: #000;
   }
   
   .payment-options {
@@ -320,561 +359,333 @@
     background: #0671B8;
     color: white;
     border: none;
-    padding: 16px;
+    padding: 14px;
     border-radius: 10px;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.2s;
+    width: 100%;
   }
   
   .payment-btn:hover {
     background: #055A9A;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(6,113,184,0.3);
   }
   
-  /* Scrollbar personalizada */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: #2B2D33;
-    border-radius: 10px;
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: #0671B8;
-    border-radius: 10px;
-  }
-  
-  /* Responsive */
-  @media (max-width: 968px) {
-    .main-container {
-      flex-direction: column;
-    }
-    
-    .cart-section {
-      min-width: 100%;
-    }
-  }
-  
-  .hidden {
-    display: none !important;
-  }
-  
-  /* Estilos para tarjetas de clientes */
-  .cliente-card {
-    background: white;
+  .cliente-item-modal {
+    background: #f5f5f5;
     border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 12px;
-    border-left: 6px solid #0671B8;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 4px solid #0671B8;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
   }
   
-  .btn-small {
-    background: #0671B8;
-    color: white;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    cursor: pointer;
+  .cliente-item-modal:hover {
+    background: #e9ecef;
   }
   
-  .btn-small-danger {
-    background: #DC3545;
-  }
-  
-  .btn-small-danger:hover {
-    background: #C82333;
-  }
-  
-  .form-control-custom {
+  .modal-search {
     width: 100%;
     padding: 12px;
-    border-radius: 10px;
-    border: 1px solid #ccc;
-    margin-bottom: 15px;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  
+  @media (max-width: 968px) {
+    .main-container { flex-direction: column; }
+    .cart-section { min-width: 100%; height: auto; }
   }
 </style>
 </head>
 <body>
 
-
 <div class="top-header">
-  <button class="btn-header active" id="btnProductos" onclick="showProductsView()">
-    <i class="fas fa-search me-2"></i>Productos
-  </button>
+  <!-- Botón Productos (activo por defecto) - Cambiado a ícono de carpeta -->
+  <a href="{% url 'dashboard_cajero' %}" class="btn-header active" id="btnProductos">
+    <i class="fas fa-folder me-2"></i>Productos
+  </a>
 
-  <button class="btn-header" onclick="showCategoriasView()" id="btnCategorias">
+  <!-- Botón Categorías -->
+  <a href="{% url 'categorias:lista_categorias' %}" class="btn-header" id="btnCategorias">
     <i class="fas fa-folder me-2"></i>Categorías
-  </button>
+  </a>
 
-  <button class="btn-header" onclick="showProveedoresView()" id="btnProveedores">
+  <!-- Botón Proveedores -->
+  <a href="{% url 'proveedores:lista_proveedores' %}" class="btn-header" id="btnProveedores">
     <i class="fas fa-truck me-2"></i>Proveedores
-  </button>
+  </a>
 
-  <button class="btn-header" id="btnMovimientos" onclick="showMovementsView()">
+  <!-- Botón Movimientos (Ventas) -->
+  <a href="{% url 'ventas:ver_ventas' %}" class="btn-header" id="btnMovimientos">
     <i class="fas fa-exchange-alt me-2"></i>Movimientos
-  </button>
+  </a>
 
-  <!-- Botón Nuevo Cliente 
-  <button class="btn-header" onclick="showNuevoClienteView()">
+  <!-- Botón Nuevo Cliente -->
+  <a href="{% url 'clientes:registro_cliente' %}" class="btn-header">
     <i class="fas fa-user-plus me-2"></i>Nuevo Cliente
-  </button>-->
-  <!-- dashboard_cajero.html -->
-<!-- usuarios/templates/usuarios/dashboard_cajero.html -->
-<a href="{% url 'clientes:registro_cliente' %}" class="btn-header">
-    <i class="fas fa-user-plus me-2"></i>Nuevo Cliente
-</a>
+  </a>
 
   <!-- Botón Lista Clientes -->
-  <a href="{% url 'clientes:ver_clientes' %}" class="btn-header">
+  <a href="{% url 'clientes:lista_clientes' %}" class="btn-header">
     <i class="fas fa-list me-2"></i>Lista Clientes
   </a>
 </div>
 
-<div class="main-container" id="productsView">
+<div class="main-container">
+  
   <!-- Columna Productos -->
   <div class="productos-section">
-    <h2 class="section-title">Búsqueda de Productos</h2>
+    <h2 class="section-title">📦 Productos</h2>
     
     <div class="search-container">
-      <input type="text" class="search-input" id="searchInput" placeholder="Buscar producto...">
+      <form method="GET" action="{% url 'dashboard_cajero' %}" id="searchForm">
+        <input type="text" name="q" class="search-input" id="searchInput" 
+               placeholder="🔍 Buscar producto por nombre..." value="{{ query|default:'' }}" autocomplete="off">
+      </form>
     </div>
     
-    <div class="products-grid" id="productsList">
-      <!-- Productos se generan dinámicamente -->
+    <div class="products-list">
+      {% if productos %}
+        {% for p in productos %}
+        <div class="product-item">
+          <div class="product-info">
+            <div class="product-name">{{ p.nomProducto }}</div>
+            <div class="product-price">${{ p.precioVenta|floatformat:2 }}</div>
+            <div class="product-stock"><i class="fas fa-boxes me-1"></i>Stock: {{ p.stockActual }} unidades</div>
+          </div>
+          <form method="POST" action="{% url 'ventas:agregar_al_carrito' %}">
+            {% csrf_token %}
+            <input type="hidden" name="producto_id" value="{{ p.codProducto }}">
+            <input type="hidden" name="cantidad" value="1">
+            <button type="submit" class="btn-add-cart" {% if p.stockActual <= 0 %}disabled{% endif %}>
+              <i class="fas fa-cart-plus me-1"></i> Agregar
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: #666;">
+          <i class="fas fa-box-open" style="font-size: 48px; margin-bottom: 15px; display: block;"></i>
+          No se encontraron productos
+        </div>
+      {% endif %}
     </div>
   </div>
 
   <!-- Columna Carrito -->
   <div class="cart-section">
-    <h3 class="cart-title">Carrito de Compras</h3>
+    <h3 class="cart-title">🛒 Carrito de Compras</h3>
     
-    <div class="cart-items" id="cartList">
-      <div style="text-align: center; color: #888; padding: 40px 0;">
-        <i class="fas fa-shopping-cart" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
-        Carrito vacío
-      </div>
+    <div class="cliente-info">
+      {% if cliente_venta %}
+        <i class="fas fa-user-check me-2"></i>
+        <strong>{{ cliente_venta.nombre }}</strong>
+        <button class="btn btn-sm btn-warning ms-2" onclick="abrirModalClientes()">Cambiar</button>
+      {% else %}
+        <i class="fas fa-user me-2"></i>Sin cliente seleccionado
+        <button class="btn-seleccionar" onclick="abrirModalClientes()">
+          <i class="fas fa-user-plus me-1"></i> Seleccionar Cliente
+        </button>
+      {% endif %}
+    </div>
+    
+    <div class="cart-items">
+      {% if carrito and carrito.items %}
+        {% for item in carrito.items %}
+        <div class="cart-item">
+          <div class="cart-item-info">
+            <div class="cart-item-name">{{ item.nombre }}</div>
+            <div class="cart-item-qty">Cantidad: {{ item.cantidad }}</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="cart-item-price">${{ item.subtotal|floatformat:2 }}</div>
+            <a href="{% url 'ventas:eliminar_del_carrito' item.cod %}" 
+               class="btn-eliminar" 
+               onclick="return confirm('¿Eliminar {{ item.nombre }} del carrito?')">
+              <i class="fas fa-trash"></i> Eliminar
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div style="text-align: center; color: #888; padding: 40px 0;">
+          <i class="fas fa-shopping-cart" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
+          Carrito vacío
+        </div>
+      {% endif %}
     </div>
     
     <div class="cart-totals">
       <div class="total-row">
         <span>Subtotal:</span>
-        <span>$<span id="subtotal">0.00</span></span>
+        <span>${{ carrito.subtotal|floatformat:2|default:"0.00" }}</span>
       </div>
       <div class="total-row total">
         <span>Total:</span>
-        <span style="color: #6BBF59;">$<span id="total">0.00</span></span>
+        <span style="color: #6BBF59;">${{ carrito.total|floatformat:2|default:"0.00" }}</span>
       </div>
     </div>
     
-    <button class="btn-confirm" onclick="openPaymentModal()">
-      Confirmar Pago
-    </button>
+    {% if carrito and carrito.items %}
+      <button class="btn-confirm" onclick="abrirModalPago()">
+        <i class="fas fa-qrcode me-2"></i> Confirmar Pago
+      </button>
+    {% else %}
+      <button class="btn-confirm" disabled>Confirmar Pago</button>
+    {% endif %}
   </div>
 </div>
 
-<!-- Vista de Movimientos -->
-<div class="main-container hidden" id="movementsView">
-  <div class="productos-section" style="width: 100%;">
-    <h2 class="section-title">Movimientos de Inventario</h2>
-    <div id="movementsList" style="background: white; border-radius: 12px; padding: 20px; max-height: 60vh; overflow-y: auto;">
-      <!-- Movimientos se generan dinámicamente -->
+<!-- Modal de Clientes (emergente) -->
+<div class="modal-overlay" id="clientesModal">
+  <div class="clientes-modal">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4><i class="fas fa-user-check me-2"></i> Seleccionar Cliente</h4>
+      <button class="btn-close" onclick="cerrarModalClientes()" style="background: none; border: none; font-size: 24px;">&times;</button>
     </div>
-  </div>
-</div>
-
-<!-- Vista de Nuevo Cliente -->
-<div class="main-container hidden" id="nuevoClienteView">
-  <div class="productos-section" style="width: 100%;">
-    <h2 class="section-title"><i class="fas fa-user-plus me-2"></i>Registrar Nuevo Cliente</h2>
-    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; margin: 0 auto;">
-      <input type="text" id="clienteNombre" class="form-control-custom" placeholder="Nombre completo" autocomplete="off">
-      <input type="email" id="clienteEmail" class="form-control-custom" placeholder="Correo electrónico">
-      <input type="tel" id="clienteTelefono" class="form-control-custom" placeholder="Teléfono">
-      <button class="btn-confirm" onclick="guardarCliente()" style="margin-top: 10px;">Guardar Cliente</button>
+    
+    <input type="text" id="modalSearchInput" class="modal-search" placeholder="🔍 Buscar por CARNET o NOMBRE...">
+    
+    <div id="modalClientesList" style="max-height: 400px; overflow-y: auto;">
+      {% if clientes_disponibles %}
+        {% for c in clientes_disponibles %}
+        <div class="cliente-item-modal" data-nombre="{{ c.nombre|lower }}" data-carnet="{{ c.carnet|default:'' }}">
+          <div>
+            <strong><i class="fas fa-user-circle me-1"></i> {{ c.nombre }}</strong><br>
+            <small class="text-muted">
+              {% if c.carnet %}Carnet: {{ c.carnet }} | {% endif %}
+              Tel: {{ c.telefono }}
+            </small>
+          </div>
+          <form method="POST" action="{% url 'ventas:seleccionar_cliente' %}" style="display: inline;">
+            {% csrf_token %}
+            <input type="hidden" name="cliente_id" value="{{ c.id_cliente }}">
+            <button type="submit" class="btn btn-sm btn-primary">
+              <i class="fas fa-check"></i> Seleccionar
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center py-4">No hay clientes registrados</div>
+      {% endif %}
     </div>
-  </div>
-</div>
-
-<!-- Vista de Lista Clientes -->
-<div class="main-container hidden" id="listaClientesView">
-  <div class="productos-section" style="width: 100%;">
-    <h2 class="section-title"><i class="fas fa-users me-2"></i>Lista de Clientes Registrados</h2>
-    <div id="clientesList" style="background: white; border-radius: 12px; padding: 20px; max-height: 60vh; overflow-y: auto;">
-      <!-- Clientes dinámicos -->
-    </div>
+    
+    <hr>
+    <form method="POST" action="{% url 'ventas:seleccionar_cliente' %}">
+      {% csrf_token %}
+      <input type="hidden" name="cliente_id" value="">
+      <button type="submit" class="btn btn-secondary w-100">
+        <i class="fas fa-receipt me-1"></i> Continuar sin cliente
+      </button>
+    </form>
   </div>
 </div>
 
 <!-- Modal de Pago -->
 <div class="modal-overlay" id="paymentModal">
   <div class="payment-modal">
-    <h3 class="payment-title">Seleccionar Método de Pago</h3>
+    <h3 class="payment-title">💰 Seleccionar Método de Pago</h3>
     <div class="payment-options">
-      <button class="payment-btn" onclick="processPayment('Efectivo')">
-        <i class="fas fa-money-bill-wave me-2"></i>Efectivo
-      </button>
-      <button class="payment-btn" onclick="processPayment('QR')">
-        <i class="fas fa-qrcode me-2"></i>QR
-      </button>
-      <button class="payment-btn" onclick="processPayment('Tarjeta')">
-        <i class="fas fa-credit-card me-2"></i>Tarjeta
-      </button>
+      <form method="POST" action="{% url 'ventas:registro_venta' %}">
+        {% csrf_token %}
+        <input type="hidden" name="metodo_pago" value="Efectivo">
+        <button type="submit" class="payment-btn" style="background:#28a745;">
+          <i class="fas fa-money-bill-wave me-2"></i> Efectivo
+        </button>
+      </form>
+      <form method="POST" action="{% url 'ventas:registro_venta' %}">
+        {% csrf_token %}
+        <input type="hidden" name="metodo_pago" value="QR">
+        <button type="submit" class="payment-btn" style="background:#28a745;">
+          <i class="fas fa-qrcode me-2"></i> QR
+        </button>
+      </form>
+      <form method="POST" action="{% url 'ventas:registro_venta' %}">
+        {% csrf_token %}
+        <input type="hidden" name="metodo_pago" value="Tarjeta">
+        <button type="submit" class="payment-btn" style="background:#28a745;">
+          <i class="fas fa-credit-card me-2"></i> Tarjeta
+        </button>
+      </form>
     </div>
-    <button class="btn btn-secondary mt-3" onclick="closePaymentModal()" style="width: 100%; padding: 12px; border-radius: 10px;">
+    <button class="btn btn-secondary mt-3" onclick="cerrarModalPago()" style="width: 100%; padding: 12px; border-radius: 10px;">
       Cancelar
     </button>
   </div>
 </div>
 
 <script>
-  // Datos
-  let categorias = JSON.parse(localStorage.getItem("categoriasSistema")) || ["Lacteos", "Pan", "Frutas", "Bebidas", "Snacks"];
-  let productos = JSON.parse(localStorage.getItem("productos")) || [
-    { nombre:"Leche Entera 1L", precio:1.50, stock:120, categoria:"Lacteos" },
-    { nombre:"Pan Integral", precio:2.20, stock:50, categoria:"Pan" },
-    { nombre:"Manzanas Rojas", precio:0.80, stock:200, categoria:"Frutas" },
-    { nombre:"Arroz 1kg", precio:1.80, stock:80, categoria:"Granos" },
-    { nombre:"Huevos (docena)", precio:3.00, stock:30, categoria:"Lacteos" }
-  ];
-  let carrito = [];
-  let movimientos = JSON.parse(localStorage.getItem("movimientosGlobal")) || [];
-  let clientes = JSON.parse(localStorage.getItem("clientesSistema")) || [];
-
-  function guardarTodo() {
-    localStorage.setItem("categoriasSistema", JSON.stringify(categorias));
-    localStorage.setItem("productos", JSON.stringify(productos));
-    localStorage.setItem("movimientosGlobal", JSON.stringify(movimientos));
-    localStorage.setItem("clientesSistema", JSON.stringify(clientes));
+  // Búsqueda automática de productos
+  const searchInput = document.getElementById('searchInput');
+  const searchForm = document.getElementById('searchForm');
+  
+  if (searchInput) {
+    let timeoutId;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        searchForm.submit();
+      }, 500);
+    });
   }
-
-  // Renderizar productos
-  function renderProductos() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const container = document.getElementById('productsList');
-    
-    const filtrados = productos.filter(p => 
-      p.nombre.toLowerCase().includes(searchTerm)
-    );
-    
-    if (filtrados.length === 0) {
-      container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #666; padding: 40px;">No se encontraron productos</div>';
-      return;
+  
+  // Modal de clientes
+  function abrirModalClientes() {
+    document.getElementById('clientesModal').classList.add('active');
+    const modalSearch = document.getElementById('modalSearchInput');
+    if (modalSearch) {
+      modalSearch.addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        const items = document.querySelectorAll('#modalClientesList .cliente-item-modal');
+        items.forEach(item => {
+          const nombre = item.dataset.nombre || '';
+          const carnet = item.dataset.carnet || '';
+          item.style.display = (nombre.includes(term) || carnet.includes(term)) ? 'flex' : 'none';
+        });
+      });
     }
-    
-    container.innerHTML = filtrados.map((prod, idx) => {
-      const originalIdx = productos.findIndex(p => p.nombre === prod.nombre);
-      return `
-        <div class="product-card">
-          <div class="product-name">${escapeHtml(prod.nombre)}</div>
-          <div class="product-price">$${prod.precio.toFixed(2)}</div>
-          <div class="product-stock">Stock: ${prod.stock}</div>
-          <div class="product-actions">
-            <button class="btn-edit" onclick="editarProducto(${originalIdx})">
-              <i class="fas fa-edit me-1"></i>Editar
-            </button>
-            <button class="btn-delete" onclick="eliminarProducto(${originalIdx})">
-              <i class="fas fa-trash me-1"></i>Eliminar
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
   }
-
-  // Agregar al carrito
-  function agregarAlCarrito(idx) {
-    const prod = productos[idx];
-    if (prod.stock <= 0) {
-      alert('Sin stock disponible');
-      return;
-    }
-    
-    const existingItem = carrito.find(item => item.nombre === prod.nombre);
-    if (existingItem) {
-      if (existingItem.cantidad < prod.stock) {
-        existingItem.cantidad++;
-      } else {
-        alert('No hay más stock disponible');
-        return;
-      }
-    } else {
-      carrito.push({ ...prod, cantidad: 1 });
-    }
-    
-    renderCarrito();
+  
+  function cerrarModalClientes() {
+    document.getElementById('clientesModal').classList.remove('active');
   }
-
-  // Renderizar carrito
-  function renderCarrito() {
-    const container = document.getElementById('cartList');
-    
-    if (carrito.length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; color: #888; padding: 40px 0;">
-          <i class="fas fa-shopping-cart" style="font-size: 3rem; margin-bottom: 15px; display: block;"></i>
-          Carrito vacío
-        </div>
-      `;
-      document.getElementById('subtotal').textContent = '0.00';
-      document.getElementById('total').textContent = '0.00';
-      return;
-    }
-    
-    let subtotal = 0;
-    container.innerHTML = carrito.map((item, idx) => {
-      subtotal += item.precio * item.cantidad;
-      return `
-        <div class="cart-item">
-          <div class="cart-item-info">
-            <div class="cart-item-name">${escapeHtml(item.nombre)}</div>
-            <div class="cart-item-qty">x ${item.cantidad}</div>
-          </div>
-          <div class="cart-item-price">$${(item.precio * item.cantidad).toFixed(2)}</div>
-        </div>
-      `;
-    }).join('');
-    
-    document.getElementById('subtotal').textContent = subtotal.toFixed(2);
-    document.getElementById('total').textContent = subtotal.toFixed(2);
-  }
-
-  // Abrir modal de pago
-  function openPaymentModal() {
-    if (carrito.length === 0) {
-      alert('El carrito está vacío');
-      return;
-    }
+  
+  // Modal de pago
+  function abrirModalPago() {
     document.getElementById('paymentModal').classList.add('active');
   }
-
-  // Cerrar modal
-  function closePaymentModal() {
+  
+  function cerrarModalPago() {
     document.getElementById('paymentModal').classList.remove('active');
   }
-
-  // Procesar pago
-  function processPayment(metodo) {
-    // Verificar stock
-    for (let item of carrito) {
-      const prod = productos.find(p => p.nombre === item.nombre);
-      if (!prod || prod.stock < item.cantidad) {
-        alert(`Stock insuficiente para ${item.nombre}`);
-        return;
-      }
+  
+  // Cerrar modales con ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      cerrarModalClientes();
+      cerrarModalPago();
     }
-    
-    // Actualizar stock y registrar movimientos
-    for (let item of carrito) {
-      const prod = productos.find(p => p.nombre === item.nombre);
-      if (prod) {
-        prod.stock -= item.cantidad;
-        movimientos.unshift({
-          fecha: new Date().toLocaleString(),
-          tipo: "VENTA",
-          producto: item.nombre,
-          cantidad: item.cantidad,
-          precio: item.precio,
-          metodo: metodo,
-          total: item.precio * item.cantidad,
-          stockRestante: prod.stock
-        });
-      }
-    }
-    
-    guardarTodo();
-    carrito = [];
-    renderCarrito();
-    renderProductos();
-    closePaymentModal();
-    
-    alert(`✅ Pago confirmado con ${metodo}\nTotal: $${document.getElementById('total').textContent}`);
-  }
-
-  // Editar producto
-  function editarProducto(idx) {
-    const prod = productos[idx];
-    const nuevoNombre = prompt("Nombre:", prod.nombre);
-    if (!nuevoNombre) return;
-    
-    const nuevoPrecio = parseFloat(prompt("Precio:", prod.precio));
-    if (isNaN(nuevoPrecio)) return;
-    
-    const nuevoStock = parseInt(prompt("Stock:", prod.stock));
-    if (isNaN(nuevoStock)) return;
-    
-    productos[idx] = { ...prod, nombre: nuevoNombre, precio: nuevoPrecio, stock: nuevoStock };
-    guardarTodo();
-    renderProductos();
-  }
-
-  // Eliminar producto
-  function eliminarProducto(idx) {
-    if (confirm(`¿Eliminar "${productos[idx].nombre}"?`)) {
-      productos.splice(idx, 1);
-      guardarTodo();
-      renderProductos();
-    }
-  }
-
-  // ========== CLIENTES ==========
-  function guardarCliente() {
-    const nombre = document.getElementById('clienteNombre').value.trim();
-    const email = document.getElementById('clienteEmail').value.trim();
-    const telefono = document.getElementById('clienteTelefono').value.trim();
-    
-    if (!nombre) {
-      alert('El nombre del cliente es obligatorio');
-      return;
-    }
-    
-    const nuevoCliente = {
-      id: Date.now(),
-      nombre: nombre,
-      email: email,
-      telefono: telefono,
-      fechaRegistro: new Date().toLocaleString()
-    };
-    
-    clientes.push(nuevoCliente);
-    guardarTodo();
-    
-    // Limpiar formulario
-    document.getElementById('clienteNombre').value = '';
-    document.getElementById('clienteEmail').value = '';
-    document.getElementById('clienteTelefono').value = '';
-    
-    alert(`Cliente "${nombre}" registrado con éxito`);
-    showListaClientesView(); // Cambiar a lista de clientes para ver el registro
-  }
-  
-  function eliminarCliente(id) {
-    if (confirm('¿Eliminar este cliente?')) {
-      clientes = clientes.filter(c => c.id !== id);
-      guardarTodo();
-      renderListaClientes();
-    }
-  }
-  
-  function renderListaClientes() {
-    const container = document.getElementById('clientesList');
-    if (clientes.length === 0) {
-      container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">No hay clientes registrados</div>';
-      return;
-    }
-    
-    container.innerHTML = clientes.map(cli => `
-      <div class="cliente-card">
-        <div>
-          <strong><i class="fas fa-user-circle me-1"></i> ${escapeHtml(cli.nombre)}</strong><br>
-          <small style="color: #666;"><i class="fas fa-envelope me-1"></i> ${escapeHtml(cli.email || 'No especificado')}</small><br>
-          <small style="color: #666;"><i class="fas fa-phone me-1"></i> ${escapeHtml(cli.telefono || 'No especificado')}</small><br>
-          <small style="color: #999;">Registro: ${cli.fechaRegistro}</small>
-        </div>
-        <button class="btn-small btn-small-danger" onclick="eliminarCliente(${cli.id})">
-          <i class="fas fa-trash-alt me-1"></i>Eliminar
-        </button>
-      </div>
-    `).join('');
-  }
-  
-  // Funciones de cambio de vista
-  function showProductsView() {
-    ocultarTodasVistas();
-    document.getElementById('productsView').classList.remove('hidden');
-    document.getElementById('btnProductos').classList.add('active');
-    renderProductos();
-  }
-  
-  function showCategoriasView() {
-    alert('Vista de categorías en desarrollo');
-  }
-  
-  function showProveedoresView() {
-    alert('Vista de proveedores en desarrollo');
-  }
-  
-  function showMovementsView() {
-    ocultarTodasVistas();
-    document.getElementById('movementsView').classList.remove('hidden');
-    document.getElementById('btnMovimientos').classList.add('active');
-    renderMovements();
-  }
-  
-  function showNuevoClienteView() {
-    ocultarTodasVistas();
-    document.getElementById('nuevoClienteView').classList.remove('hidden');
-    // Limpiar campos al entrar
-    document.getElementById('clienteNombre').value = '';
-    document.getElementById('clienteEmail').value = '';
-    document.getElementById('clienteTelefono').value = '';
-  }
-  
-  function showListaClientesView() {
-    ocultarTodasVistas();
-    document.getElementById('listaClientesView').classList.remove('hidden');
-    renderListaClientes();
-  }
-  
-  function ocultarTodasVistas() {
-    document.getElementById('productsView').classList.add('hidden');
-    document.getElementById('movementsView').classList.add('hidden');
-    document.getElementById('nuevoClienteView').classList.add('hidden');
-    document.getElementById('listaClientesView').classList.add('hidden');
-    
-    // Remover active de todos los botones
-    const botones = document.querySelectorAll('.btn-header');
-    botones.forEach(btn => btn.classList.remove('active'));
-  }
-  
-  // Renderizar movimientos
-  function renderMovements() {
-    const container = document.getElementById('movementsList');
-    if (movimientos.length === 0) {
-      container.innerHTML = '<div style="text-align: center; color: #666;">Sin movimientos registrados</div>';
-      return;
-    }
-    
-    container.innerHTML = movimientos.slice(0, 50).map(m => `
-      <div style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <strong>${m.tipo}</strong> - ${m.producto}<br>
-          <small style="color: #666;">${m.fecha} | Método: ${m.metodo || 'N/A'}</small>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-weight: 700; color: #0671B8;">$${m.total?.toFixed(2) || '0.00'}</div>
-          <small style="color: #666;">Stock: ${m.stockRestante}</small>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  // Event listeners
-  document.getElementById('searchInput').addEventListener('input', renderProductos);
-  
-  // Inicialización
-  function init() {
-    renderProductos();
-    renderCarrito();
-  }
-  
-  init();
+  });
 </script>
+
+<!-- Mensajes de Django -->
+{% if messages %}
+  {% for message in messages %}
+    <script>
+      Swal.fire({
+        title: '{% if message.tags == "success" %}✅ Éxito{% elif message.tags == "error" %}❌ Error{% else %}ℹ️ Información{% endif %}',
+        text: '{{ message }}',
+        icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% else %}info{% endif %}',
+        timer: 2500,
+        showConfirmButton: false
+      });
+    </script>
+  {% endfor %}
+{% endif %}
+
 </body>
 </html>
