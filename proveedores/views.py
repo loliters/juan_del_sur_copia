@@ -30,7 +30,7 @@ def crear_proveedor(request):
     
     # Solo administrador puede crear
     if request.session.get('rol') != 'administrador':
-        messages.error(request, '❌ Acceso denegado. Solo el administrador puede crear proveedores.')
+        messages.error(request, ' Acceso denegado. Solo el administrador puede crear proveedores.')
         return redirect('proveedores:lista')
     
     if request.method == 'POST':
@@ -74,7 +74,7 @@ def editar_proveedor(request, id_proveedor):
     
     # Solo administrador puede editar
     if request.session.get('rol') != 'administrador':
-        messages.error(request, '❌ Acceso denegado. Solo el administrador puede editar proveedores.')
+        messages.error(request, ' Acceso denegado. Solo el administrador puede editar proveedores.')
         return redirect('proveedores:lista')
     
     proveedor = get_object_or_404(Proveedor, id=id_proveedor)
@@ -110,7 +110,7 @@ def eliminar_proveedor(request, id_proveedor):
     
     # Solo administrador puede eliminar
     if request.session.get('rol') != 'administrador':
-        messages.error(request, '❌ Acceso denegado. Solo el administrador puede eliminar proveedores.')
+        messages.error(request, ' Acceso denegado. Solo el administrador puede eliminar proveedores.')
         return redirect('proveedores:lista')
     
     proveedor = get_object_or_404(Proveedor, id=id_proveedor)

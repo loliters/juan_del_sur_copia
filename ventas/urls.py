@@ -10,9 +10,12 @@ urlpatterns = [
     path('editar/<int:id>/', views.editar_venta, name='editar_venta'),
     path('eliminar/<int:id>/', views.eliminar_venta, name='eliminar_venta'),
     
-    # Carrito
-    path('agregar-al-carrito/', views.agregar_al_carrito, name='agregar_al_carrito'),
-    path('eliminar-del-carrito/<str:cod>/', views.eliminar_del_carrito, name='eliminar_del_carrito'),  # ← Cambiar a <str:cod>
+    # Ventas
     path('registro-venta/', views.registro_venta, name='registro_venta'),
     path('seleccionar-cliente/', views.seleccionar_cliente, name='seleccionar_cliente'),
+    
+    # AJAX endpoints para carrito (ESTAS 3 SON LAS IMPORTANTES)
+    path('agregar-al-carrito/', views.agregar_al_carrito_ajax, name='agregar_al_carrito'),
+    path('actualizar-cantidad/', views.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),
+    path('eliminar-del-carrito/', views.eliminar_del_carrito_ajax, name='eliminar_del_carrito'),
 ]

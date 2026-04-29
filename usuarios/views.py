@@ -23,29 +23,29 @@ def login_view(request):
         password = request.POST.get('password', '')
 
         if not email or not password:
-            messages.error(request, '⚠️ Completa todos los campos')
+            messages.error(request, ' Completa todos los campos')
             return redirect('login')
 
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            messages.error(request, '❌ Correo electrónico inválido')
+            messages.error(request, ' Correo electrónico inválido')
             return redirect('login')
 
         try:
             user = Usuario.objects.select_related('rol').get(email__iexact=email)
         except Usuario.DoesNotExist:
-            messages.error(request, '❌ Usuario o contraseña incorrectos')
+            messages.error(request, ' Usuario o contraseña incorrectos')
             return redirect('login')
 
         if not user.estado:
-            messages.error(request, '🚫 Usuario deshabilitado. Contacta al administrador')
+            messages.error(request, ' Usuario deshabilitado. Contacta al administrador')
             return redirect('login')
 
         if not check_password(password, user.password):
-            messages.error(request, '❌ Usuario o contraseña incorrectos')
+            messages.error(request, ' Usuario o contraseña incorrectos')
             return redirect('login')
 
         if not user.rol or not user.rol.nom_rol:
-            messages.error(request, '⚠️ Usuario sin rol asignado. Contacta al administrador')
+            messages.error(request, ' Usuario sin rol asignado. Contacta al administrador')
             return redirect('login')
 
         rol = user.rol.nom_rol.strip().lower()
@@ -62,7 +62,7 @@ def login_view(request):
         elif rol == "cajero":
             return redirect('dashboard_cajero')
         else:
-            messages.error(request, '❌ Rol no válido en el sistema')
+            messages.error(request, ' Rol no válido en el sistema')
             return redirect('login')
 
     return render(request, 'usuarios/login.html')
@@ -246,7 +246,13 @@ def dashboard_cajero(request):
     if query:
         productos = productos.filter(nomProducto__icontains=query)
     
+    # Asegurar que el carrito tenga el formato correcto con 'cod'
     carrito = request.session.get('carrito', {'items': [], 'total': 0, 'subtotal': 0})
+    
+    # Convertir items antiguos que puedan tener 'id' a tener 'cod'
+    for item in carrito.get('items', []):
+        if 'id' in item and 'cod' not in item:
+            item['cod'] = item['id']
     
     cliente_id = request.session.get('cliente_venta')
     cliente = None
@@ -256,7 +262,6 @@ def dashboard_cajero(request):
         except Cliente.DoesNotExist:
             request.session['cliente_venta'] = None
     
-    # Obtener clientes para el modal (activos)
     clientes_disponibles = Cliente.objects.filter(estado=True).order_by('nombre')
     
     return render(request, 'usuarios/dashboard_cajero.html', {
@@ -264,12 +269,15 @@ def dashboard_cajero(request):
         'query': query,
         'carrito': carrito,
         'cliente_venta': cliente,
-        'clientes_disponibles': clientes_disponibles,  # ← NUEVO
+        'clientes_disponibles': clientes_disponibles,
     })
 
 # =========================
 # AGREGAR AL CARRITO
 # =========================
+# usuarios/views.py - Modifica la función agregar_al_carrito
+# (para mantener compatibilidad con el método POST tradicional)
+
 def agregar_al_carrito(request):
     if request.session.get('usuario_id') is None:
         return redirect('login')
@@ -279,19 +287,17 @@ def agregar_al_carrito(request):
         cantidad = int(request.POST.get('cantidad', 1))
         
         try:
-            producto = Producto.objects.get(id_producto=producto_id, estado='activo')
+            producto = Producto.objects.get(codProducto=producto_id, estado='activo')  # Usar codProducto
             
             if producto.stockActual < cantidad:
                 messages.error(request, f'Stock insuficiente para {producto.nomProducto}')
                 return redirect('dashboard_cajero')
             
-            # Obtener o crear carrito en sesión
             carrito = request.session.get('carrito', {'items': [], 'subtotal': 0, 'total': 0})
             
-            # Buscar si el producto ya está en el carrito
             encontrado = False
             for item in carrito['items']:
-                if item['id'] == producto_id:
+                if item.get('cod') == producto_id or item.get('id') == producto_id:
                     nueva_cantidad = item['cantidad'] + cantidad
                     if nueva_cantidad > producto.stockActual:
                         messages.error(request, f'No hay suficiente stock de {producto.nomProducto}')
@@ -303,14 +309,14 @@ def agregar_al_carrito(request):
             
             if not encontrado:
                 carrito['items'].append({
-                    'id': producto.id_producto,
+                    'cod': producto.codProducto,
+                    'id': producto.id,
                     'nombre': producto.nomProducto,
                     'precio': float(producto.precioVenta),
                     'cantidad': cantidad,
                     'subtotal': cantidad * float(producto.precioVenta)
                 })
             
-            # Recalcular totales
             carrito['subtotal'] = sum(item['subtotal'] for item in carrito['items'])
             carrito['total'] = carrito['subtotal']
             
@@ -524,7 +530,7 @@ def modify(request, id):
             usuario.rol = rol_obj
             usuario.save()
             
-            messages.success(request, f'✅ Usuario actualizado correctamente. Nuevo email: {email}')
+            messages.success(request, f'Usuario actualizado correctamente. Nuevo email: {email}')
         except IntegrityError as e:
             messages.error(request, f'Error al actualizar usuario: {str(e)}')
             return redirect('modify', id=id)
@@ -553,7 +559,7 @@ def eliminar_usuario(request, id):
     usuario.estado = False
     usuario.save()
     
-    messages.success(request, f'✅ Usuario {usuario.nom_usuario} deshabilitado')
+    messages.success(request, f' Usuario {usuario.nom_usuario} deshabilitado')
     return redirect('dashboard_admin')
 
 

@@ -30,21 +30,21 @@ def registro_cliente(request):
             messages.error(request, 'El nombre es obligatorio')
             errores = True
         elif not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', nombre):
-            messages.error(request, '❌ El nombre solo debe contener letras y espacios (sin números)')
+            messages.error(request, ' El nombre solo debe contener letras y espacios (sin números)')
             errores = True
         
         # 2. Validar RAZÓN SOCIAL (solo letras y espacios, OPCIONAL)
         if razonSocial and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', razonSocial):
-            messages.error(request, '❌ La razón social solo debe contener letras y espacios (sin números)')
+            messages.error(request, ' La razón social solo debe contener letras y espacios (sin números)')
             errores = True
         
         # 3. Validar CARNET (solo números, OPCIONAL)
         # 3. Validar CARNET (solo números, OPCIONAL)
         if carnet and not re.match(r'^[0-9]+$', carnet):
-            messages.error(request, '❌ El carnet solo debe contener números')
+            messages.error(request, ' El carnet solo debe contener números')
             errores = True
         elif carnet and Cliente.objects.filter(carnet=carnet).exists():
-            messages.error(request, f'❌ El carnet "{carnet}" ya está registrado por otro cliente')
+            messages.error(request, f' El carnet "{carnet}" ya está registrado por otro cliente')
             errores = True
         
         # 4. Validar EMAIL (formato válido, OBLIGATORIO)
@@ -154,17 +154,17 @@ def editar_cliente(request, id):
             messages.error(request, 'El nombre es obligatorio')
             errores = True
         elif not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', nombre):
-            messages.error(request, '❌ El nombre solo debe contener letras y espacios')
+            messages.error(request, ' El nombre solo debe contener letras y espacios')
             errores = True
         
         # Validar RAZÓN SOCIAL
         if razonSocial and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', razonSocial):
-            messages.error(request, '❌ La razón social solo debe contener letras y espacios')
+            messages.error(request, ' La razón social solo debe contener letras y espacios')
             errores = True
         
         # Validar CARNET
         if carnet and not re.match(r'^[0-9]+$', carnet):
-            messages.error(request, '❌ El carnet solo debe contener números')
+            messages.error(request, ' El carnet solo debe contener números')
             errores = True
         
         # Validar EMAIL
@@ -172,12 +172,12 @@ def editar_cliente(request, id):
             messages.error(request, 'El email es obligatorio')
             errores = True
         elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            messages.error(request, '❌ Ingrese un correo electrónico válido')
+            messages.error(request, ' Ingrese un correo electrónico válido')
             errores = True
         else:
             # Verificar email no exista en otro cliente
             if Cliente.objects.filter(email=email).exclude(id_cliente=id).exists():
-                messages.error(request, '❌ Este correo electrónico ya está registrado por otro cliente')
+                messages.error(request, ' Este correo electrónico ya está registrado por otro cliente')
                 errores = True
         
         # Validar TELÉFONO
@@ -240,7 +240,7 @@ def eliminar_cliente(request, id):
         nombre = cliente.nombre
         cliente.estado = False  # Borrado lógico
         cliente.save()
-        messages.success(request, f'✅ Cliente "{nombre}" eliminado exitosamente')
+        messages.success(request, f'Cliente "{nombre}" eliminado exitosamente')
         return redirect('clientes:lista_clientes')
     
     return render(request, 'clientes/eliminar.html', {'cliente': cliente})
@@ -266,5 +266,5 @@ def restaurar_cliente(request, id):
     cliente.estado = True
     cliente.save()
     
-    messages.success(request, f'✅ Cliente "{cliente.nombre}" restaurado exitosamente')
+    messages.success(request, f' Cliente "{cliente.nombre}" restaurado exitosamente')
     return redirect('clientes:clientes_inactivos')

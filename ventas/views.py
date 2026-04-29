@@ -71,7 +71,7 @@ def editar_venta(request, id):
                 venta.metodo_pago = metodo_pago
                 venta.save()
                 
-                messages.success(request, f'✅ Venta #{venta.id_venta} actualizada exitosamente')
+                messages.success(request, f' Venta #{venta.id_venta} actualizada exitosamente')
                 return redirect('ventas:ver_ventas')
                 
             except Cliente.DoesNotExist:
@@ -114,11 +114,11 @@ def eliminar_venta(request, id):
             detalles.delete()
             venta.delete()
             
-            messages.success(request, f'✅ Venta #{id} eliminada y stock restaurado')
+            messages.success(request, f' Venta #{id} eliminada y stock restaurado')
             return redirect('ventas:ver_ventas')
             
         except Exception as e:
-            messages.error(request, f'❌ Error al eliminar venta: {str(e)}')
+            messages.error(request, f' Error al eliminar venta: {str(e)}')
     
     return render(request, 'ventas/eliminar_venta.html', {'venta': venta})
 # ========================
@@ -187,7 +187,7 @@ def eliminar_del_carrito(request, cod):
     # Guardar carrito en sesión
     request.session['carrito'] = carrito
     
-    messages.success(request, '✅ Producto eliminado del carrito')
+    messages.success(request, ' Producto eliminado del carrito')
     return redirect('dashboard_cajero')
 
 
@@ -201,7 +201,7 @@ def seleccionar_cliente(request):
         if cliente_id:
             cliente = get_object_or_404(Cliente, id_cliente=cliente_id, estado=True)
             request.session['cliente_venta'] = cliente.id_cliente
-            messages.success(request, f'✅ Cliente {cliente.nombre} seleccionado')
+            messages.success(request, f' Cliente {cliente.nombre} seleccionado')
         else:
             request.session['cliente_venta'] = None
             messages.info(request, 'Venta sin cliente registrado')
@@ -231,7 +231,7 @@ def registro_venta(request):
     carrito = request.session.get('carrito', {'items': [], 'total': 0})
     
     if not carrito['items']:
-        messages.error(request, '❌ El carrito está vacío')
+        messages.error(request, ' El carrito está vacío')
         return redirect('dashboard_cajero')
     
     if request.method == 'POST':
@@ -286,11 +286,160 @@ def registro_venta(request):
             request.session['carrito'] = {'items': [], 'total': 0}
             request.session['cliente_venta'] = None
             
-            messages.success(request, f'✅ Venta #{venta.id_venta} registrada por ${venta.total}')
+            messages.success(request, f' Venta #{venta.id_venta} registrada por ${venta.total}')
             
         except Exception as e:
-            messages.error(request, f'❌ Error: {str(e)}')
+            messages.error(request, f' Error: {str(e)}')
         
         return redirect('dashboard_cajero')
     
     return redirect('dashboard_cajero')
+#nuevas cosas
+# ventas/views.py
+
+# ventas/views.py - Agrega estas funciones al final del archivo
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from productos.models import Producto
+
+# ========================
+# AJAX - AGREGAR AL CARRITO
+# ========================
+@require_http_methods(["POST"])
+def agregar_al_carrito_ajax(request):
+    """Agrega un producto al carrito vía AJAX"""
+    if request.session.get('usuario_id') is None:
+        return JsonResponse({'success': False, 'error': 'Sesión no iniciada'}, status=401)
+    
+    producto_id = request.POST.get('producto_id')
+    cantidad = int(request.POST.get('cantidad', 1))
+    
+    try:
+        producto = Producto.objects.get(codProducto=producto_id, estado='activo')
+        
+        if producto.stockActual < cantidad:
+            return JsonResponse({'success': False, 'error': f'Stock insuficiente para {producto.nomProducto}'})
+        
+        carrito = request.session.get('carrito', {'items': [], 'total': 0, 'subtotal': 0})
+        
+        encontrado = False
+        for item in carrito['items']:
+            if str(item.get('cod')) == str(producto_id):
+                nueva_cantidad = item['cantidad'] + cantidad
+                if nueva_cantidad > producto.stockActual:
+                    return JsonResponse({'success': False, 'error': f'No hay suficiente stock de {producto.nomProducto}'})
+                item['cantidad'] = nueva_cantidad
+                item['subtotal'] = item['precio'] * nueva_cantidad
+                encontrado = True
+                break
+        
+        if not encontrado:
+            carrito['items'].append({
+                'cod': producto.codProducto,
+                'id': producto.id,
+                'nombre': producto.nomProducto,
+                'precio': float(producto.precioVenta),
+                'cantidad': cantidad,
+                'subtotal': float(producto.precioVenta) * cantidad
+            })
+        
+        carrito['subtotal'] = sum(item['subtotal'] for item in carrito['items'])
+        carrito['total'] = carrito['subtotal']
+        
+        request.session['carrito'] = carrito
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Agregado {producto.nomProducto} al carrito',
+            'cart_items_count': len(carrito['items']),
+            'cart_subtotal': carrito['subtotal'],
+            'cart_total': carrito['total']
+        })
+        
+    except Producto.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Producto no encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ========================
+# AJAX - ACTUALIZAR CANTIDAD
+# ========================
+@require_http_methods(["POST"])
+def actualizar_cantidad_carrito(request):
+    """Actualiza la cantidad de un producto en el carrito vía AJAX"""
+    if request.session.get('usuario_id') is None:
+        return JsonResponse({'success': False, 'error': 'Sesión no iniciada'}, status=401)
+    
+    producto_cod = request.POST.get('producto_cod')
+    nueva_cantidad = int(request.POST.get('cantidad', 1))
+    
+    if nueva_cantidad < 1:
+        return JsonResponse({'success': False, 'error': 'La cantidad debe ser mayor a 0'})
+    
+    carrito = request.session.get('carrito', {'items': [], 'total': 0, 'subtotal': 0})
+    
+    item_encontrado = None
+    for item in carrito['items']:
+        if str(item.get('cod')) == str(producto_cod):
+            # Verificar stock
+            try:
+                producto = Producto.objects.get(codProducto=producto_cod)
+                if producto.stockActual < nueva_cantidad:
+                    return JsonResponse({
+                        'success': False, 
+                        'error': f'Stock insuficiente. Solo hay {producto.stockActual} unidades disponibles'
+                    })
+            except Producto.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Producto no encontrado'})
+            
+            item['cantidad'] = nueva_cantidad
+            item['subtotal'] = item['precio'] * nueva_cantidad
+            item_encontrado = item
+            break
+    
+    if not item_encontrado:
+        return JsonResponse({'success': False, 'error': 'Producto no encontrado en el carrito'})
+    
+    carrito['subtotal'] = sum(item['subtotal'] for item in carrito['items'])
+    carrito['total'] = carrito['subtotal']
+    
+    request.session['carrito'] = carrito
+    
+    return JsonResponse({
+        'success': True,
+        'item_subtotal': item_encontrado['subtotal'],
+        'cart_subtotal': carrito['subtotal'],
+        'cart_total': carrito['total'],
+        'cart_items_count': len(carrito['items'])
+    })
+
+
+# ========================
+# AJAX - ELIMINAR DEL CARRITO
+# ========================
+@require_http_methods(["POST"])
+def eliminar_del_carrito_ajax(request):
+    """Elimina un producto del carrito vía AJAX"""
+    if request.session.get('usuario_id') is None:
+        return JsonResponse({'success': False, 'error': 'Sesión no iniciada'}, status=401)
+    
+    producto_cod = request.POST.get('producto_cod')
+    
+    carrito = request.session.get('carrito', {'items': [], 'total': 0, 'subtotal': 0})
+    
+    carrito['items'] = [item for item in carrito['items'] 
+                        if str(item.get('cod')) != str(producto_cod)]
+    
+    carrito['subtotal'] = sum(item.get('subtotal', 0) for item in carrito['items'])
+    carrito['total'] = carrito['subtotal']
+    
+    request.session['carrito'] = carrito
+    
+    return JsonResponse({
+        'success': True,
+        'cart_subtotal': carrito['subtotal'],
+        'cart_total': carrito['total'],
+        'cart_items_count': len(carrito['items'])
+    })
