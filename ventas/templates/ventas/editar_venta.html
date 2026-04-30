@@ -2,30 +2,28 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Editar Venta</title>
+    <title>Editar Venta - Juan del Sur</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     {% load static %}
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
         body {
             background-color: #2B2D33;
-            height: 100vh;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            padding: 30px;
             font-family: 'Segoe UI', system-ui, sans-serif;
         }
         
         .card-form {
-            width: 100%;
-            max-width: 500px;
+            max-width: 1000px;
+            margin: 0 auto;
             border-radius: 15px;
-            padding: 20px;
+            padding: 25px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             background: white;
         }
@@ -39,24 +37,177 @@
             background-color: #055A9A;
         }
         
-        .alert {
-            font-size: 0.85rem;
-        }
-        
-        .detalle-item {
+        .producto-item {
             background: #f5f5f5;
             border-radius: 8px;
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
-        .badge-metodo {
+        .producto-info {
+            flex: 1;
+        }
+        
+        .producto-nombre {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .producto-precio {
+            font-size: 0.85rem;
+            color: #0671B8;
+        }
+        
+        .producto-acciones {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .cantidad-btn {
             background: #0671B8;
-            padding: 5px 12px;
-            border-radius: 20px;
+            border: none;
             color: white;
-            font-size: 0.75rem;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .cantidad-btn:hover {
+            background: #055A9A;
+        }
+        
+        .cantidad-display {
+            background: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-eliminar-producto {
+            background: #DC3545;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .btn-eliminar-producto:hover {
+            background: #c82333;
+        }
+        
+        .total-box {
+            background: #0671B8;
+            color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .btn-agregar-producto {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .btn-agregar-producto:hover {
+            background: #218838;
+        }
+        
+        .modal-productos {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .modal-productos.active {
+            display: block;
+        }
+        
+        .modal-content-productos {
+            background: white;
+            max-width: 800px;
+            margin: 50px auto;
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #0671B8;
+        }
+        
+        .producto-card {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .producto-card:hover {
+            background: #0671B8;
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .producto-card:hover .producto-card-precio {
+            color: white;
+        }
+        
+        .producto-card-nombre {
+            font-weight: 600;
+        }
+        
+        .producto-card-precio {
+            color: #0671B8;
+            font-weight: bold;
+        }
+        
+        .producto-card-stock {
+            font-size: 0.7rem;
+            color: #666;
+        }
+        
+        .buscar-producto-modal {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -70,7 +221,7 @@
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show">
-                {{ message }}
+                {{ message|safe }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         {% endfor %}
@@ -81,26 +232,7 @@
         <input type="text" class="form-control" value="{{ venta.fecha|date:'d/m/Y H:i' }}" disabled>
     </div>
     
-    <div class="mb-3">
-        <label class="form-label"><i class="bi bi-cart me-1"></i>Productos</label>
-        {% for detalle in detalles %}
-        <div class="detalle-item">
-            <div class="d-flex justify-content-between">
-                <span><strong>{{ detalle.inventario.producto.nomProducto }}</strong></span>
-                <span>x{{ detalle.cantidad }}</span>
-                <span>${{ detalle.subtotal|floatformat:2 }}</span>
-            </div>
-        </div>
-        {% endfor %}
-        <div class="detalle-item bg-primary text-white mt-2">
-            <div class="d-flex justify-content-between">
-                <strong>Total:</strong>
-                <strong>${{ venta.total|floatformat:2 }}</strong>
-            </div>
-        </div>
-    </div>
-    
-    <form method="POST">
+    <form method="POST" id="formEditarVenta">
         {% csrf_token %}
         
         <div class="mb-3">
@@ -127,7 +259,47 @@
             </select>
         </div>
         
-        <div class="d-flex gap-2">
+        <!-- SECCIÓN: Productos actuales -->
+        <div class="mb-3">
+            <label class="form-label"><i class="bi bi-cart me-1"></i>Productos en la venta</label>
+            <div id="productos-container">
+                {% for detalle in detalles %}
+                <div class="producto-item" data-producto-id="{{ detalle.inventario.producto.codProducto }}">
+                    <div class="producto-info">
+                        <div class="producto-nombre">{{ detalle.inventario.producto.nomProducto }}</div>
+                        <div class="producto-precio">
+                            Bs {{ detalle.precio_unitario|floatformat:2 }} c/u
+                        </div>
+                    </div>
+                    <div class="producto-acciones">
+                        <button type="button" class="cantidad-btn" onclick="cambiarCantidad(this, -1)">-</button>
+                        <span class="cantidad-display">{{ detalle.cantidad }}</span>
+                        <button type="button" class="cantidad-btn" onclick="cambiarCantidad(this, 1)">+</button>
+                        <button type="button" class="btn-eliminar-producto" onclick="eliminarProducto(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <!-- CORREGIDO: precio entre comillas dobles -->
+                    <!-- <input type="hidden" name="productos[]" class="producto-input" value='{"cod":"{{ detalle.inventario.producto.codProducto }}", "cantidad":{{ detalle.cantidad }}, "precio":"{{ detalle.precio_unitario|floatformat:2 }}" }'> -->
+                     <input type="hidden" name="productos[]" class="producto-input"
+value='{"cod":"${cod}", "cantidad":1, "precio":"${precio}"}'>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <button type="button" class="btn-agregar-producto" onclick="abrirModalProductos()">
+                <i class="fas fa-plus-circle me-2"></i> Agregar más productos
+            </button>
+            
+            <div class="total-box">
+                <div class="d-flex justify-content-between">
+                    <strong>Total:</strong>
+                    <strong id="total-venta">Bs 0.00</strong>
+                </div>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2 mt-3">
             <button type="submit" class="btn btn-primary w-50">
                 <i class="bi bi-save"></i> Guardar Cambios
             </button>
@@ -137,5 +309,355 @@
         </div>
     </form>
 </div>
+
+<!-- MODAL DE PRODUCTOS -->
+<div id="modalProductos" class="modal-productos">
+    <div class="modal-content-productos">
+        <div class="modal-header">
+            <h5><i class="fas fa-boxes me-2"></i>Seleccionar Producto</h5>
+            <button type="button" class="btn-close" onclick="cerrarModalProductos()" style="background: none; border: none; font-size: 24px;">&times;</button>
+        </div>
+        
+        <input type="text" id="buscarProductoModal" class="buscar-producto-modal" placeholder="🔍 Buscar producto por nombre...">
+        
+        <div id="listaProductosModal">
+            {% for producto in productos_disponibles %}
+            <div class="producto-card" data-cod="{{ producto.codProducto }}" data-nombre="{{ producto.nomProducto }}" data-precio="{{ producto.precioVenta|floatformat:2 }}" data-stock="{{ producto.stockActual }}" onclick="seleccionarProducto(this)">
+                <div>
+                    <div class="producto-card-nombre">{{ producto.nomProducto }}</div>
+                    <div class="producto-card-stock"><i class="fas fa-boxes me-1"></i>Stock: {{ producto.stockActual }}</div>
+                </div>
+                <div class="producto-card-precio">Bs {{ producto.precioVenta|floatformat:2 }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function cambiarCantidad(btn, delta) {
+        const productoItem = btn.closest('.producto-item');
+        const cantidadSpan = productoItem.querySelector('.cantidad-display');
+        let cantidadActual = parseInt(cantidadSpan.innerText);
+        let nuevaCantidad = cantidadActual + delta;
+        
+        if (nuevaCantidad < 1) {
+            Swal.fire({
+                title: '¿Eliminar producto?',
+                text: 'La cantidad sería 0. ¿Deseas eliminar este producto?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) eliminarProducto(btn);
+            });
+            return;
+        }
+        
+        cantidadSpan.innerText = nuevaCantidad;
+        
+        const inputHidden = productoItem.querySelector('.producto-input');
+        if (inputHidden && inputHidden.value) {
+            try {
+                const data = JSON.parse(inputHidden.value);
+                data.cantidad = nuevaCantidad;
+                inputHidden.value = JSON.stringify(data);
+                console.log('Cantidad actualizada:', data);
+            } catch(e) {
+                console.error('Error:', e);
+            }
+        }
+        
+        recalcularTotal();
+    }
+    
+    function eliminarProducto(btn) {
+        btn.closest('.producto-item').remove();
+        recalcularTotal();
+    }
+    
+    function recalcularTotal() {
+        let total = 0;
+        let contador = 0;
+        document.querySelectorAll('.producto-item').forEach(item => {
+            const inputHidden = item.querySelector('.producto-input');
+            if (inputHidden && inputHidden.value) {
+                try {
+                    const data = JSON.parse(inputHidden.value);
+                    let precio = parseFloat(data.precio);
+                    let cantidad = parseInt(data.cantidad);
+                    if (!isNaN(precio) && !isNaN(cantidad) && precio > 0) {
+                        const subtotal = precio * cantidad;
+                        total += subtotal;
+                        contador++;
+                        console.log(`Producto ${contador}: ${data.cod} - ${cantidad} x ${precio} = ${subtotal}`);
+                    } else {
+                        console.warn(`Producto con datos inválidos:`, data);
+                    }
+                } catch(e) {
+                    console.error('Error al recalcular:', e, 'Valor:', inputHidden.value);
+                }
+            }
+        });
+        document.getElementById('total-venta').innerHTML = `Bs ${total.toFixed(2)}`;
+        console.log(`Total calculado: Bs ${total.toFixed(2)}`);
+    }
+    
+    function abrirModalProductos() {
+        document.getElementById('modalProductos').classList.add('active');
+        document.getElementById('buscarProductoModal').value = '';
+        filtrarProductos();
+    }
+    
+    function cerrarModalProductos() {
+        document.getElementById('modalProductos').classList.remove('active');
+    }
+    
+    function seleccionarProducto(elemento) {
+        const cod = elemento.getAttribute('data-cod');
+        const nombre = elemento.getAttribute('data-nombre');
+        const precio = parseFloat(elemento.getAttribute('data-precio'));
+        const stock = parseInt(elemento.getAttribute('data-stock'));
+        
+        if (document.querySelector(`.producto-item[data-producto-id="${cod}"]`)) {
+            Swal.fire({ title: 'Producto ya existe', text: 'Este producto ya está en la venta.', icon: 'warning', timer: 2000, showConfirmButton: false });
+            cerrarModalProductos();
+            return;
+        }
+        
+        if (stock <= 0) {
+            Swal.fire({ title: 'Sin stock', text: `No hay stock disponible de ${nombre}`, icon: 'error', timer: 2000, showConfirmButton: false });
+            return;
+        }
+        
+        const container = document.getElementById('productos-container');
+        const nuevoItem = document.createElement('div');
+        nuevoItem.className = 'producto-item';
+        nuevoItem.setAttribute('data-producto-id', cod);
+        nuevoItem.innerHTML = `
+            <div class="producto-info">
+                <div class="producto-nombre">${nombre}</div>
+                <div class="producto-precio">Bs ${precio.toFixed(2)} c/u</div>
+            </div>
+            <div class="producto-acciones">
+                <button type="button" class="cantidad-btn" onclick="cambiarCantidad(this, -1)">-</button>
+                <span class="cantidad-display">1</span>
+                <button type="button" class="cantidad-btn" onclick="cambiarCantidad(this, 1)">+</button>
+                <button type="button" class="btn-eliminar-producto" onclick="eliminarProducto(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <input type="hidden" name="productos" class="producto-input" value='{"cod":"${cod}", "cantidad":1, "precio":"${precio}"}'>
+        `;
+        container.appendChild(nuevoItem);
+        recalcularTotal();
+        
+        Swal.fire({ title: '✓ Producto agregado', text: `${nombre} agregado a la venta`, icon: 'success', timer: 1500, showConfirmButton: false });
+        cerrarModalProductos();
+    }
+    
+    function filtrarProductos() {
+        const busqueda = document.getElementById('buscarProductoModal').value.toLowerCase();
+        document.querySelectorAll('#listaProductosModal .producto-card').forEach(producto => {
+            const nombre = producto.getAttribute('data-nombre').toLowerCase();
+            producto.style.display = nombre.includes(busqueda) ? 'flex' : 'none';
+        });
+    }
+    
+    // Inicializar: recalcular total al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('=== INICIALIZANDO PÁGINA ===');
+        
+        // Verificar cada producto existente
+        document.querySelectorAll('.producto-item').forEach((item, index) => {
+            const inputHidden = item.querySelector('.producto-input');
+            if (inputHidden && inputHidden.value) {
+                try {
+                    const data = JSON.parse(inputHidden.value);
+                    console.log(`Producto ${index + 1} cargado:`, data);
+                    console.log(`  - Precio: ${data.precio} (tipo: ${typeof data.precio})`);
+                    console.log(`  - Cantidad: ${data.cantidad}`);
+                    
+                    // Si el precio es 0 o inválido, intentar obtenerlo del elemento HTML
+                    if (data.precio === 0 || data.precio === null || isNaN(parseFloat(data.precio))) {
+                        const precioSpan = item.querySelector('.producto-precio');
+                        if (precioSpan) {
+                            let precioTexto = precioSpan.innerText;
+                            let precioMatch = precioTexto.match(/[\d,.]+/);
+                            if (precioMatch) {
+                                data.precio = parseFloat(precioMatch[0].replace(',', '.'));
+                                inputHidden.value = JSON.stringify(data);
+                                console.log(`  Precio corregido: ${data.precio}`);
+                            }
+                        }
+                    }
+                } catch(e) {
+                    console.error('Error cargando producto:', e);
+                }
+            } else {
+                console.warn(`Producto ${index + 1} no tiene input hidden`);
+            }
+        });
+        
+        recalcularTotal();
+    });
+    
+    // Event listeners
+    document.getElementById('buscarProductoModal').addEventListener('input', filtrarProductos);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModalProductos(); });
+    
+    // Al enviar el formulario, mostrar en consola qué se envía
+    document.getElementById('formEditarVenta').addEventListener('submit', function(e) {
+        console.log('=== ENVIANDO FORMULARIO ===');
+        let contador = 0;
+        document.querySelectorAll('.producto-item').forEach(item => {
+            const cantidadSpan = item.querySelector('.cantidad-display');
+            const inputHidden = item.querySelector('.producto-input');
+            if (inputHidden && cantidadSpan) {
+                try {
+                    const data = JSON.parse(inputHidden.value);
+                    data.cantidad = parseInt(cantidadSpan.innerText);
+                    inputHidden.value = JSON.stringify(data);
+                    console.log(`Producto ${++contador}:`, data);
+                } catch(e) { 
+                    console.error('Error:', e); 
+                }
+            }
+        });
+        console.log(`Total productos a enviar: ${contador}`);
+    });
+
+    // Función para verificar y corregir los datos antes de enviar
+function prepararDatosParaEnvio() {
+    console.log('=== PREPARANDO DATOS PARA ENVÍO ===');
+    let productosValidos = [];
+    
+    document.querySelectorAll('.producto-item').forEach((item, index) => {
+        const cantidadSpan = item.querySelector('.cantidad-display');
+        const inputHidden = item.querySelector('.producto-input');
+        
+        if (inputHidden && cantidadSpan) {
+            try {
+                // Obtener el valor actual del hidden
+                let valorActual = inputHidden.value;
+                let data;
+                
+                // Intentar parsear el JSON existente
+                try {
+                    data = JSON.parse(valorActual);
+                } catch(e) {
+                    // Si no es JSON válido, crear uno nuevo
+                    console.warn(`Producto ${index + 1} tiene JSON inválido, creando nuevo...`);
+                    data = {};
+                }
+                
+                // Actualizar con los valores actuales
+                const cod = item.getAttribute('data-producto-id');
+                const cantidad = parseInt(cantidadSpan.innerText);
+                
+                // Obtener precio del elemento
+                let precio = data.precio;
+                if (!precio || precio === 0) {
+                    const precioSpan = item.querySelector('.producto-precio');
+                    if (precioSpan) {
+                        const precioTexto = precioSpan.innerText;
+                        const precioMatch = precioTexto.match(/[\d,.]+/);
+                        if (precioMatch) {
+                            precio = parseFloat(precioMatch[0].replace(',', '.'));
+                        }
+                    }
+                }
+                
+                // Crear objeto actualizado
+                const productoActualizado = {
+                    cod: cod,
+                    cantidad: cantidad,
+                    precio: precio
+                };
+                
+                // Actualizar el input hidden
+                inputHidden.value = JSON.stringify(productoActualizado);
+                productosValidos.push(productoActualizado);
+                
+                console.log(`Producto ${index + 1}:`, productoActualizado);
+                
+            } catch(e) {
+                console.error(`Error preparando producto ${index + 1}:`, e);
+            }
+        }
+    });
+    
+    console.log(`Total productos preparados: ${productosValidos.length}`);
+    return productosValidos;
+}
+
+// Modificar el evento submit del formulario
+document.getElementById('formEditarVenta').addEventListener('submit', function(e) {
+    e.preventDefault(); // Prevenir envío normal
+    
+    console.log('=== VERIFICANDO PRODUCTOS ANTES DE ENVIAR ===');
+    
+    // Preparar todos los datos
+    const productosValidos = prepararDatosParaEnvio();
+    
+    if (productosValidos.length === 0) {
+        Swal.fire({
+            title: 'Error',
+            text: 'Debe agregar al menos un producto',
+            icon: 'error',
+            timer: 2000,
+            showConfirmButton: false
+        });
+        return;
+    }
+    
+    // Crear FormData con todos los datos
+    const formData = new FormData(this);
+    
+    // Limpiar productos existentes en FormData (por si acaso)
+    formData.delete('productos');
+    
+    // Agregar cada producto individualmente
+    document.querySelectorAll('.producto-input').forEach(input => {
+        if (input.value && input.value !== 'null' && input.value !== 'undefined') {
+            try {
+                const data = JSON.parse(input.value);
+                if (data.cod && data.cantidad && data.precio) {
+                    formData.append('productos', input.value);
+                    console.log('Producto agregado a FormData:', data);
+                }
+            } catch(e) {
+                console.error('Error al agregar producto a FormData:', e);
+            }
+        }
+    });
+    
+    // Verificar cuántos productos se enviarán
+    const productosEnviados = formData.getAll('productos');
+    console.log(`Enviando ${productosEnviados.length} productos al servidor`);
+    
+    // Enviar el formulario
+    fetch(this.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            return response.text();
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+        // Si falla el fetch, enviar normalmente
+        this.submit();
+    });
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

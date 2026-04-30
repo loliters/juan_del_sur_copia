@@ -244,8 +244,8 @@
                                 <tr>
                                     <td>{{ detalle.inventario.producto.nomProducto }}</td>
                                     <td class="text-center">{{ detalle.cantidad }}</td>
-                                    <td class="text-end">${{ detalle.subtotal|floatformat:2 }}</td>
-                                    <td class="text-end">${{ detalle.subtotal|floatformat:2 }}</td>
+                                    <td class="text-end">Bs{{ detalle.subtotal|floatformat:2 }}</td>
+                                    <td class="text-end">Bs{{ detalle.subtotal|floatformat:2 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -253,7 +253,7 @@
                         
                         <!-- Total -->
                         <div class="total-venta">
-                            <strong>Total:</strong> ${{ item.venta.total|floatformat:2 }}
+                            <strong>Total:</strong> Bs{{ item.venta.total|floatformat:2 }}
                         </div>
                     </div>
                 </div>

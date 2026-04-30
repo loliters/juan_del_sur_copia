@@ -271,6 +271,23 @@ def dashboard_cajero(request):
         'cliente_venta': cliente,
         'clientes_disponibles': clientes_disponibles,
     })
+# Agrega esto para formatear precios desde el backend
+    for producto in productos:
+        producto.precio_formateado = f"Bs {producto.precioVenta:.2f}"
+    
+    if carrito and carrito.get('items'):
+        for item in carrito['items']:
+            item['subtotal_formateado'] = f"Bs {item['subtotal']:.2f}"
+        carrito['subtotal_formateado'] = f"Bs {carrito.get('subtotal', 0):.2f}"
+        carrito['total_formateado'] = f"Bs {carrito.get('total', 0):.2f}"
+    
+    return render(request, 'usuarios/dashboard_cajero.html', {
+        'productos': productos,
+        'query': query,
+        'carrito': carrito,
+        'cliente_venta': cliente,
+        'clientes_disponibles': clientes_disponibles,
+    })
 
 # =========================
 # AGREGAR AL CARRITO
@@ -339,57 +356,71 @@ def registro_venta(request):
     carrito = request.session.get('carrito', {'items': [], 'total': 0})
     
     if not carrito['items']:
-        messages.error(request, 'El carrito está vacío')
+        messages.error(request, ' El carrito está vacío')
         return redirect('dashboard_cajero')
     
     if request.method == 'POST':
-        metodo_pago = request.POST.get('metodo_pago')
+        metodo_pago = request.POST.get('metodo_pago', 'QR')
+        cliente_id = request.session.get('cliente_venta')
         
         try:
             # Verificar stock nuevamente
             for item in carrito['items']:
-                producto = Producto.objects.get(id_producto=item['id'])
+                producto = Producto.objects.get(id=item['id'])
                 if producto.stockActual < item['cantidad']:
                     messages.error(request, f'Stock insuficiente para {producto.nomProducto}')
                     return redirect('dashboard_cajero')
             
+            # Obtener o crear método de pago
+            metodo, _ = MetodoPago.objects.get_or_create(tipoPago=metodo_pago)
+            
+            # Obtener cliente
+            cliente = None
+            if cliente_id:
+                cliente = Cliente.objects.filter(id_cliente=cliente_id, estado=True).first()
+            
             # Crear venta
             venta = Venta.objects.create(
                 total=carrito['total'],
-                cliente=None,  # Por ahora cliente opcional
-                metodo_pago_id=metodo_pago
+                cliente=cliente,
+                metodo_pago=metodo
             )
             
             # Crear detalles y descontar stock
             for item in carrito['items']:
-                producto = Producto.objects.get(id_producto=item['id'])
-                
-                # Descontar stock
+                producto = Producto.objects.get(id=item['id'])
                 producto.stockActual -= item['cantidad']
                 producto.save()
                 
-                # Crear detalle venta
+                # Buscar o crear inventario
+                inventario, _ = Inventario.objects.get_or_create(
+                    producto=producto,
+                    defaults={'stock_actual': producto.stockActual, 'tipoUnidad': 'unidad'}
+                )
+                inventario.stock_actual = producto.stockActual
+                inventario.save()
+                
+                # Crear detalle - SIN precio_unitario
                 DetalleVenta.objects.create(
                     venta=venta,
-                    producto=producto,
+                    inventario=inventario,
                     cantidad=item['cantidad'],
-                    precio_unitario=item['precio'],
-                    subtotal=item['subtotal']
+                    subtotal=item['subtotal']  # subtotal = cantidad * precio
                 )
             
-            # Limpiar carrito
-            request.session['carrito'] = {'items': [], 'subtotal': 0, 'total': 0}
+            # Limpiar carrito y cliente
+            request.session['carrito'] = {'items': [], 'total': 0}
+            request.session['cliente_venta'] = None
             
-            messages.success(request, f'Venta #{venta.id_venta} registrada exitosamente')
-            return redirect('dashboard_cajero')
+            # Cambiar $ por Bs
+            messages.success(request, f'Venta #{venta.id_venta} registrada exitosamente - Total: Bs {venta.total:.2f}')
             
         except Exception as e:
-            messages.error(request, f'Error al registrar venta: {str(e)}')
-            return redirect('dashboard_cajero')
+            messages.error(request, f' Error: {str(e)}')
+        
+        return redirect('dashboard_cajero')
     
-    # Si es GET, mostrar modal de pago
-    return render(request, 'usuarios/pago_modal.html', {'carrito': carrito})
-
+    return redirect('dashboard_cajero')
 
 # =========================
 # DASHBOARD ADMIN

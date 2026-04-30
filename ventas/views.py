@@ -35,22 +35,33 @@ def ver_ventas(request):
         'es_cajero': request.session.get('rol') == 'cajero',
     })
 
-
+#Editar venta
 def editar_venta(request, id):
     # Verificar sesión - cualquier usuario logueado puede editar
     if request.session.get('usuario_id') is None:
         return redirect('login')
     
-    # ❌ ELIMINA ESTAS LÍNEAS:
-    # if request.session.get('rol') != "administrador":
-    #     messages.error(request, '❌ Solo el administrador puede editar ventas')
-    #     return redirect('ventas:ver_ventas')
-    
     venta = get_object_or_404(Venta, id_venta=id)
+    
+    # Obtener detalles actuales
+    detalles_actuales = DetalleVenta.objects.filter(venta=venta).select_related('inventario__producto')
     
     if request.method == "POST":
         cliente_id = request.POST.get('cliente_id')
         metodo_pago_id = request.POST.get('metodo_pago_id')
+        productos_data = request.POST.getlist('productos')
+        
+        # ========== DEBUG ==========
+        print("=" * 60)
+        print("EDITAR VENTA - POST RECIBIDO")
+        print(f"Venta ID: {id}")
+        print(f"Cliente ID: {cliente_id}")
+        print(f"Método Pago ID: {metodo_pago_id}")
+        print(f"Total productos recibidos: {len(productos_data)}")
+        for i, p in enumerate(productos_data):
+            print(f"  Producto {i+1}: {p}")
+        print("=" * 60)
+        # ========== FIN DEBUG ==========
         
         errores = False
         
@@ -62,33 +73,216 @@ def editar_venta(request, id):
             messages.error(request, 'Debe seleccionar un método de pago')
             errores = True
         
+        if not productos_data:
+            messages.error(request, 'Debe agregar al menos un producto')
+            errores = True
+        
         if not errores:
             try:
+                import json
+                import re
+                
                 cliente = Cliente.objects.get(id_cliente=cliente_id)
                 metodo_pago = MetodoPago.objects.get(id_met_pago=metodo_pago_id)
                 
                 venta.cliente = cliente
                 venta.metodo_pago = metodo_pago
-                venta.save()
                 
-                messages.success(request, f' Venta #{venta.id_venta} actualizada exitosamente')
+                # Procesar productos del formulario
+                nuevos_productos = {}
+                
+                for item_json in productos_data:
+                    try:
+                        # Limpiar el JSON
+                        item_json = item_json.strip()
+                        if not item_json or item_json == 'null' or item_json == 'undefined':
+                            print(f"  Saltando item vacío: {item_json}")
+                            continue
+                        
+                        # Intentar parsear el JSON
+                        # Reemplazar comillas simples por dobles si es necesario
+                        item_json = item_json.replace("'", '"')
+                        item = json.loads(item_json)
+                        
+                        cod = item.get('cod')
+                        if not cod:
+                            print(f"  Producto sin código: {item}")
+                            continue
+                            
+                        cantidad = int(item.get('cantidad', 1))
+                        precio = float(item.get('precio', 0))
+                        
+                        nuevos_productos[cod] = {'cantidad': cantidad, 'precio': precio}
+                        print(f"  ✓ Producto procesado: {cod} - Cantidad: {cantidad} - Precio: {precio}")
+                        
+                    except json.JSONDecodeError as e:
+                        print(f"  ✗ Error JSON en: {item_json}")
+                        print(f"    Error: {e}")
+                        continue
+                    except (ValueError, KeyError) as e:
+                        print(f"  ✗ Error en datos: {e} - Item: {item_json}")
+                        continue
+                
+                print(f"Total productos válidos: {len(nuevos_productos)}")
+                
+                if not nuevos_productos:
+                    messages.error(request, 'No se encontraron productos válidos')
+                    return redirect('ventas:editar_venta', id=id)
+                
+                # Diccionario de detalles actuales
+                detalles_dict = {d.inventario.producto.codProducto: d for d in detalles_actuales}
+                total_venta = 0
+                
+                # 1. Eliminar productos que ya no están en la nueva lista
+                for cod, detalle in list(detalles_dict.items()):
+                    if cod not in nuevos_productos:
+                        try:
+                            # Restaurar stock
+                            producto = detalle.inventario.producto
+                            producto.stockActual += detalle.cantidad
+                            producto.save()
+                            
+                            inventario = detalle.inventario
+                            inventario.stock_actual = producto.stockActual
+                            inventario.save()
+                            
+                            detalle.delete()
+                            print(f"  ✓ Producto eliminado: {cod}")
+                        except Exception as e:
+                            print(f"  ✗ Error eliminando detalle {cod}: {e}")
+                
+                # 2. Actualizar o crear nuevos productos
+                for cod, data in nuevos_productos.items():
+                    try:
+                        producto = Producto.objects.get(codProducto=cod)
+                        cantidad = data['cantidad']
+                        precio = data['precio']
+                        subtotal = cantidad * precio
+                        total_venta += subtotal
+                        
+                        # Obtener o crear inventario
+                        inventario, _ = Inventario.objects.get_or_create(
+                            producto=producto,
+                            defaults={'stock_actual': producto.stockActual, 'tipoUnidad': 'unidad'}
+                        )
+                        
+                        if cod in detalles_dict:
+                            # Actualizar producto existente
+                            detalle = detalles_dict[cod]
+                            diferencia = cantidad - detalle.cantidad
+                            
+                            if diferencia > 0:
+                                # Se necesita más stock
+                                if producto.stockActual < diferencia:
+                                    messages.error(request, f'Stock insuficiente para {producto.nomProducto}. Disponible: {producto.stockActual}, Necesita: {diferencia}')
+                                    return redirect('ventas:editar_venta', id=id)
+                                producto.stockActual -= diferencia
+                            elif diferencia < 0:
+                                # Se devuelve stock
+                                producto.stockActual += abs(diferencia)
+                            
+                            producto.save()
+                            inventario.stock_actual = producto.stockActual
+                            inventario.save()
+                            
+                            detalle.cantidad = cantidad
+                            detalle.subtotal = subtotal
+                            detalle.save()
+                            print(f"  ✓ Detalle actualizado: {cod} - Cantidad: {cantidad}")
+                        else:
+                            # Crear nuevo producto
+                            if producto.stockActual < cantidad:
+                                messages.error(request, f'Stock insuficiente para {producto.nomProducto}. Disponible: {producto.stockActual}, Necesita: {cantidad}')
+                                return redirect('ventas:editar_venta', id=id)
+                            
+                            producto.stockActual -= cantidad
+                            producto.save()
+                            inventario.stock_actual = producto.stockActual
+                            inventario.save()
+                            
+                            DetalleVenta.objects.create(
+                                venta=venta,
+                                inventario=inventario,
+                                cantidad=cantidad,
+                                subtotal=subtotal
+                            )
+                            print(f"  ✓ Nuevo detalle creado: {cod}")
+                            
+                    except Producto.DoesNotExist:
+                        messages.error(request, f'Producto con código {cod} no encontrado')
+                        continue
+                    except Exception as e:
+                        print(f"  ✗ Error procesando producto {cod}: {e}")
+                        messages.error(request, f'Error procesando producto: {str(e)}')
+                        return redirect('ventas:editar_venta', id=id)
+                
+                # Guardar el total de la venta
+                venta.total = total_venta
+                venta.save()
+                print(f"Total calculado: {total_venta}")
+                print(f"Total guardado en venta: {venta.total}")
+                
+                # Limpiar carrito de sesión si existe
+                if 'carrito' in request.session:
+                    del request.session['carrito']
+                
+                messages.success(request, f'✓ Venta #{venta.id_venta} actualizada exitosamente - Total: Bs {venta.total:.2f}')
                 return redirect('ventas:ver_ventas')
                 
             except Cliente.DoesNotExist:
                 messages.error(request, 'Cliente no encontrado')
             except MetodoPago.DoesNotExist:
                 messages.error(request, 'Método de pago no encontrado')
-    
+            except Exception as e:
+                messages.error(request, f'Error al actualizar: {str(e)}')
+                print(f"Error general: {e}")
+                import traceback
+                traceback.print_exc()
+    # ==================== GET - Mostrar formulario (CORREGIDO) ====================
     clientes = Cliente.objects.filter(estado=True)
     metodos_pago = MetodoPago.objects.all()
     detalles = DetalleVenta.objects.filter(venta=venta).select_related('inventario__producto')
+    productos_disponibles = Producto.objects.filter(estado='activo')
+    
+    # Calcular precio_unitario para cada detalle
+    for detalle in detalles:
+        # Asegurar que subtotal sea un número
+        subtotal = float(detalle.subtotal) if detalle.subtotal else 0.0
+        cantidad = int(detalle.cantidad) if detalle.cantidad else 1
+        
+        if cantidad > 0 and subtotal > 0:
+            detalle.precio_unitario = round(subtotal / cantidad, 2)
+        else:
+            # Si no se puede calcular, usar el precio del producto del inventario
+            precio_producto = float(detalle.inventario.producto.precioVenta) if detalle.inventario.producto.precioVenta else 0.0
+            detalle.precio_unitario = round(precio_producto, 2)
+            # También actualizar el subtotal si estaba mal
+            if subtotal == 0 and cantidad > 0:
+                detalle.subtotal = cantidad * precio_producto
+                detalle.save()
+                print(f"  - Subtotal corregido de {detalle.inventario.producto.nomProducto}: {detalle.subtotal}")
+        
+        # FORZAR que precio_unitario sea un número válido (nunca None)
+        if detalle.precio_unitario is None or detalle.precio_unitario == 0:
+            detalle.precio_unitario = float(detalle.inventario.producto.precioVenta) if detalle.inventario.producto.precioVenta else 0.0
+        
+        # Debug detallado
+        print(f"Producto cargado: {detalle.inventario.producto.nomProducto}")
+        print(f"  - Cantidad: {detalle.cantidad}")
+        print(f"  - Subtotal: {detalle.subtotal}")
+        print(f"  - Precio unitario: {detalle.precio_unitario}")
+        print(f"  - Tipo precio: {type(detalle.precio_unitario)}")
+        print("-" * 40)
     
     return render(request, 'ventas/editar_venta.html', {
         'venta': venta,
         'clientes': clientes,
         'metodos_pago': metodos_pago,
         'detalles': detalles,
+        'productos_disponibles': productos_disponibles,
     })
+
+#eliminar ventas
 def eliminar_venta(request, id):
     # Verificar sesión - cualquier usuario logueado puede eliminar
     if request.session.get('usuario_id') is None:
@@ -192,6 +386,14 @@ def eliminar_del_carrito(request, cod):
 
 
 def seleccionar_cliente(request):
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente_id')
+        
+        # Si no hay cliente_id, mostrar error
+        if not cliente_id:
+            messages.error(request, ' Debes seleccionar un cliente para continuar')
+            return redirect('dashboard_cajero')
+        
     if request.session.get('usuario_id') is None:
         return redirect('login')
     
@@ -286,7 +488,7 @@ def registro_venta(request):
             request.session['carrito'] = {'items': [], 'total': 0}
             request.session['cliente_venta'] = None
             
-            messages.success(request, f' Venta #{venta.id_venta} registrada por ${venta.total}')
+            messages.success(request, f' Venta #{venta.id_venta} registrada por Bs{venta.total}')
             
         except Exception as e:
             messages.error(request, f' Error: {str(e)}')
@@ -443,3 +645,23 @@ def eliminar_del_carrito_ajax(request):
         'cart_total': carrito['total'],
         'cart_items_count': len(carrito['items'])
     })
+# ========================
+# AJAX - BUSCAR PRODUCTOS
+# ========================
+def buscar_productos_ajax(request):
+    """API para buscar productos (usado en editar venta)"""
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        query = request.GET.get('q', '').strip()
+        if query:
+            productos = Producto.objects.filter(
+                nomProducto__icontains=query,
+                estado='activo'
+            )[:10]
+            data = [{
+                'codProducto': p.codProducto,
+                'nomProducto': p.nomProducto,
+                'precioVenta': float(p.precioVenta),
+                'stockActual': p.stockActual
+            } for p in productos]
+            return JsonResponse({'success': True, 'productos': data})
+    return JsonResponse({'success': False, 'productos': []})

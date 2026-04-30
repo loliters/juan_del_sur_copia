@@ -100,13 +100,13 @@ def registro_cliente(request):
             cliente = Cliente.objects.create(
                 nombre=nombre,
                 razonSocial=razonSocial if razonSocial else '',
+                carnet=carnet if carnet else None,  # ← ESTA ES LA LÍNEA CLAVE
                 email=email,
                 telefono=telefono,
                 zona=zona if zona else '',
                 calle=calle if calle else '',
                 numeroCasa=numeroCasa if numeroCasa else '',
                 estado=True,
-                
             )
             
             messages.success(request, f'¡Cliente {nombre} registrado exitosamente!')

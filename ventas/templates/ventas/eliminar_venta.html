@@ -79,7 +79,7 @@
         <strong>Método de pago:</strong> {{ venta.metodo_pago.tipoPago|default:"No especificado" }}
     </div>
     <div class="total">
-        <strong>Total:</strong> ${{ venta.total|floatformat:2 }}
+        <strong>Total:</strong> Bs{{ venta.total|floatformat:2 }}
     </div>
     
     <form method="POST">

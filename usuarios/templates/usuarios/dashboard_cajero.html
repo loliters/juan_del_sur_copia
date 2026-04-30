@@ -342,12 +342,20 @@
     background: #c82333;
   }
   
-  .cart-totals {
+  /* NUEVO: Contenedor de totales con flexbox para alinear */
+  .cart-totals-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  
+  .totals-info {
+    flex: 1;
     background: #2B2D33;
     border-radius: 16px;
-    padding: 15px;
-    margin-bottom: 15px;
-    flex-shrink: 0;
+    padding: 15px 20px;
   }
   
   .total-row {
@@ -365,18 +373,25 @@
     border-top: 2px solid #555;
   }
   
+  .total-row.total span:last-child {
+    color: #6BBF59;
+  }
+  
+  .btn-confirm-wrapper {
+    flex-shrink: 0;
+  }
+  
   .btn-confirm {
     background: #28a745;
     color: white;
     border: none;
-    padding: 14px;
+    padding: 14px 28px;
     border-radius: 12px;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    width: 100%;
     transition: 0.2s;
-    flex-shrink: 0;
+    white-space: nowrap;
   }
   
   .btn-confirm:hover {
@@ -387,6 +402,7 @@
   .btn-confirm:disabled {
     background: #6c757d;
     cursor: not-allowed;
+    transform: none;
   }
   
   .btn-seleccionar {
@@ -536,6 +552,18 @@
     .main-container { padding-top: 20px; }
     .nav-buttons { flex-wrap: wrap; justify-content: center; }
     .user-info { margin-top: 10px; }
+    
+    /* Responsive para totales */
+    .cart-totals-wrapper {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .btn-confirm-wrapper {
+      margin-top: 10px;
+    }
+    .btn-confirm {
+      width: 100%;
+    }
   }
 </style>
 </head>
@@ -599,7 +627,7 @@
         <div class="product-item" data-product-id="{{ p.codProducto }}" data-product-name="{{ p.nomProducto }}" data-product-price="{{ p.precioVenta }}" data-product-stock="{{ p.stockActual }}">
           <div class="product-info">
             <div class="product-name">{{ p.nomProducto }}</div>
-            <div class="product-price">${{ p.precioVenta|floatformat:2 }}</div>
+            <div class="product-price">Bs {{ p.precioVenta|floatformat:2 }}</div>
             <div class="product-stock"><i class="fas fa-boxes me-1"></i>Stock: {{ p.stockActual }} unidades</div>
           </div>
           <i class="fas fa-hand-pointer" style="color: #0671B8; opacity: 0.5; font-size: 1.2rem;"></i>
@@ -649,7 +677,7 @@
             </div>
           </div>
           <div class="cart-item-price" id="price-{{ item.cod }}">
-            ${{ item.subtotal|floatformat:2 }}
+            Bs {{ item.subtotal|floatformat:2 }}
           </div>
         </div>
         {% endfor %}
@@ -661,24 +689,29 @@
       {% endif %}
     </div>
     
-    <div class="cart-totals">
-      <div class="total-row">
-        <span>Subtotal:</span>
-        <span id="cart-subtotal">${{ carrito.subtotal|floatformat:2|default:"0.00" }}</span>
+    <!-- NUEVO: Contenedor para totales y botón de confirmar pago en la misma línea -->
+    <div class="cart-totals-wrapper">
+      <div class="totals-info">
+        <div class="total-row">
+          <span>Subtotal:</span>
+          <span id="cart-subtotal">Bs {{ carrito.subtotal|floatformat:2|default:"0.00" }}</span>
+        </div>
+        <div class="total-row total">
+          <span>Total:</span>
+          <span id="cart-total">Bs {{ carrito.total|floatformat:2|default:"0.00" }}</span>
+        </div>
       </div>
-      <div class="total-row total">
-        <span>Total:</span>
-        <span id="cart-total" style="color: #6BBF59;">${{ carrito.total|floatformat:2|default:"0.00" }}</span>
+      
+      <div class="btn-confirm-wrapper">
+        {% if carrito and carrito.items %}
+          <button class="btn-confirm" onclick="abrirModalPago()">
+            <i class="fas fa-qrcode me-2"></i> Confirmar Pago
+          </button>
+        {% else %}
+          <button class="btn-confirm" disabled>Confirmar Pago</button>
+        {% endif %}
       </div>
     </div>
-    
-    {% if carrito and carrito.items %}
-      <button class="btn-confirm" onclick="abrirModalPago()">
-        <i class="fas fa-qrcode me-2"></i> Confirmar Pago
-      </button>
-    {% else %}
-      <button class="btn-confirm" disabled>Confirmar Pago</button>
-    {% endif %}
   </div>
 </div>
 
@@ -717,14 +750,14 @@
       {% endif %}
     </div>
     
-    <hr>
+    <!-- <hr>
     <form method="POST" action="{% url 'ventas:seleccionar_cliente' %}">
       {% csrf_token %}
       <input type="hidden" name="cliente_id" value="">
       <button type="submit" class="btn btn-secondary w-100">
         <i class="fas fa-receipt me-1"></i> Continuar sin cliente
       </button>
-    </form>
+    </form> -->
   </div>
 </div>
 
@@ -833,18 +866,18 @@
         if (data.success) {
           qtySpan.innerText = nuevaCantidad;
           const priceSpan = document.getElementById(`price-${productoCodigo}`);
-          priceSpan.innerText = `$${parseFloat(data.item_subtotal).toFixed(2)}`;
-          document.getElementById('cart-subtotal').innerText = `$${parseFloat(data.cart_subtotal).toFixed(2)}`;
-          document.getElementById('cart-total').innerText = `$${parseFloat(data.cart_total).toFixed(2)}`;
+          priceSpan.innerText = `Bs ${parseFloat(data.item_subtotal).toFixed(2)}`;
+          document.getElementById('cart-subtotal').innerText = `Bs ${parseFloat(data.cart_subtotal).toFixed(2)}`;
+          document.getElementById('cart-total').innerText = `Bs ${parseFloat(data.cart_total).toFixed(2)}`;
           input.replaceWith(qtySpan);
         } else {
           input.replaceWith(qtySpan);
-          Swal.fire({ title: '❌ Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
+          Swal.fire({ title: ' Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
         }
       })
       .catch(() => {
         input.replaceWith(qtySpan);
-        Swal.fire({ title: '❌ Error', text: 'Error de conexión', icon: 'error', timer: 2000, showConfirmButton: false });
+        Swal.fire({ title: ' Error', text: 'Error de conexión', icon: 'error', timer: 2000, showConfirmButton: false });
       });
     }
     
@@ -862,7 +895,7 @@
       const productStock = parseInt(this.dataset.productStock);
       
       if (productStock <= 0) {
-        Swal.fire({ title: '❌ Sin stock', text: `No hay stock de ${productName}`, icon: 'error', timer: 2000, showConfirmButton: false });
+        Swal.fire({ title: ' Sin stock', text: `No hay stock de ${productName}`, icon: 'error', timer: 2000, showConfirmButton: false });
         return;
       }
       
@@ -876,7 +909,7 @@
         if (data.success) {
           window.location.reload();
         } else {
-          Swal.fire({ title: '❌ Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
+          Swal.fire({ title: ' Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
         }
       });
     });
@@ -905,11 +938,11 @@
     .then(data => {
       if (data.success) {
         qtySpan.innerText = nuevaCantidad;
-        document.getElementById(`price-${productoCodigo}`).innerText = `$${parseFloat(data.item_subtotal).toFixed(2)}`;
-        document.getElementById('cart-subtotal').innerText = `$${parseFloat(data.cart_subtotal).toFixed(2)}`;
-        document.getElementById('cart-total').innerText = `$${parseFloat(data.cart_total).toFixed(2)}`;
+        document.getElementById(`price-${productoCodigo}`).innerText = `Bs ${parseFloat(data.item_subtotal).toFixed(2)}`;
+        document.getElementById('cart-subtotal').innerText = `Bs ${parseFloat(data.cart_subtotal).toFixed(2)}`;
+        document.getElementById('cart-total').innerText = `Bs ${parseFloat(data.cart_total).toFixed(2)}`;
       } else {
-        Swal.fire({ title: '❌ Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
+        Swal.fire({ title: ' Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
       }
     });
   }
@@ -926,7 +959,7 @@
       if (data.success) {
         window.location.reload();
       } else {
-        Swal.fire({ title: '❌ Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
+        Swal.fire({ title: ' Error', text: data.error, icon: 'error', timer: 2000, showConfirmButton: false });
       }
     });
   }
@@ -966,7 +999,7 @@
   {% for message in messages %}
     <script>
       Swal.fire({
-        title: '{% if message.tags == "success" %}✅ Éxito{% elif message.tags == "error" %}❌ Error{% else %}ℹ️ Información{% endif %}',
+        title: '{% if message.tags == "success" %} Éxito{% elif message.tags == "error" %} Error{% else %} Información{% endif %}',
         text: '{{ message }}',
         icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% else %}info{% endif %}',
         timer: 2500,
