@@ -271,23 +271,7 @@ def dashboard_cajero(request):
         'cliente_venta': cliente,
         'clientes_disponibles': clientes_disponibles,
     })
-# Agrega esto para formatear precios desde el backend
-    for producto in productos:
-        producto.precio_formateado = f"Bs {producto.precioVenta:.2f}"
-    
-    if carrito and carrito.get('items'):
-        for item in carrito['items']:
-            item['subtotal_formateado'] = f"Bs {item['subtotal']:.2f}"
-        carrito['subtotal_formateado'] = f"Bs {carrito.get('subtotal', 0):.2f}"
-        carrito['total_formateado'] = f"Bs {carrito.get('total', 0):.2f}"
-    
-    return render(request, 'usuarios/dashboard_cajero.html', {
-        'productos': productos,
-        'query': query,
-        'carrito': carrito,
-        'cliente_venta': cliente,
-        'clientes_disponibles': clientes_disponibles,
-    })
+
 
 # =========================
 # AGREGAR AL CARRITO
@@ -378,6 +362,9 @@ def registro_venta(request):
             cliente = None
             if cliente_id:
                 cliente = Cliente.objects.filter(id_cliente=cliente_id, estado=True).first()
+            if not cliente:
+                messages.error(request, '⚠️ Debes seleccionar un cliente antes de confirmar la venta')
+                return redirect('dashboard_cajero')
             
             # Crear venta
             venta = Venta.objects.create(

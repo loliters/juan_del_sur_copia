@@ -439,6 +439,9 @@ def registro_venta(request):
     if request.method == 'POST':
         metodo_pago = request.POST.get('metodo_pago', 'QR')
         cliente_id = request.session.get('cliente_venta')
+        if not cliente_id:
+            messages.error(request, 'Seleccione un cliente')
+            return redirect('dashboard_cajero')
         
         try:
             # Verificar stock nuevamente
@@ -452,9 +455,11 @@ def registro_venta(request):
             metodo, _ = MetodoPago.objects.get_or_create(tipoPago=metodo_pago)
             
             # Obtener cliente
-            cliente = None
-            if cliente_id:
-                cliente = Cliente.objects.filter(id_cliente=cliente_id, estado=True).first()
+            cliente = Cliente.objects.filter(id_cliente=cliente_id, estado=True).first()
+
+            if not cliente:
+                messages.error(request, 'Seleccione un cliente válido')
+                return redirect('dashboard_cajero')
             
             # Crear venta
             venta = Venta.objects.create(
