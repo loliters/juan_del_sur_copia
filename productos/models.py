@@ -36,8 +36,6 @@ class Producto(models.Model):
         default=Decimal('0.00')
     )
 
-    stockActual = models.IntegerField(default=0)  # ← Mantener stockActual
-
     stockMinimo = models.IntegerField(default=0)  # ← AGREGAR stockMinimo
 
     tipoUnidad = models.CharField(
@@ -67,6 +65,26 @@ class Producto(models.Model):
         blank=True,
         related_name='productos'
     )
+
+    # PROPIEDAD PARA LEER/ESCRIBIR STOCK DESDE INVENTARIO
+    @property
+    def stockActual(self):
+
+        # Un producto puede tener VARIOS registros 
+        from django.db.models import Sum
+        total = self.inventarios.aggregate(total=Sum('stock_actual'))['total']
+        return total or 0
+
+    @stockActual.setter
+    def stockActual(self, value):
+        """Actualiza el stock en Inventario (crea el registro si no existe)"""
+        inv, created = self.inventarios.get_or_create(
+            # campos requeridos 
+            defaults={'stock_actual': value}
+        )
+        if not created:
+            inv.stock_actual = value
+            inv.save()
 
     def __str__(self):
         return self.nomProducto

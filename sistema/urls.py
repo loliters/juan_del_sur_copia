@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from usuarios import views as usuarios_views   # ← importa las vistas de usuarios
-
+ 
 urlpatterns = [
     path('', usuarios_views.login_view, name='login'),   # ← raíz apunta al login
     path('admin/', admin.site.urls),
@@ -30,5 +30,6 @@ urlpatterns = [
 
     path('ventas/', include('ventas.urls')),
     
+    path('compras/', include('compras.urls')),
     
 ]

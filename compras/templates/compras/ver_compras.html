@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Compras - Juan del Sur</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        body { 
+            background-color: #f5f5f5; 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            padding: 0; 
+        }
+        
+        /* ========== SIDEBAR STYLES ========== */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background: #2f2f2f;
+            color: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            z-index: 100;
+        }
+
+        .sidebar h5 {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+        }
+
+        .sidebar a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            margin: 12px 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            transition: 0.3s;
+        }
+
+        .sidebar a:hover {
+            background-color: #0d6efd;
+        }
+
+        .sidebar a.active {
+            background-color: #0d6efd;
+        }
+
+        .sidebar hr {
+            border-color: #555;
+            margin: 15px 0;
+        }
+
+        .content-wrapper {
+            margin-left: 250px;
+            padding: 20px;
+        }
+
+        /* ========== COMPRAS STYLES ========== */
+        .main-card { 
+            background: white; 
+            border-radius: 15px; 
+            padding: 30px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+        }
+        
+        .card {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            border-radius: 10px 10px 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+        
+        .bg-primary-custom {
+            background-color: #2563eb !important;
+            color: white;
+        }
+        
+        .table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+        }
+        
+        .btn-nuevo { 
+            background-color: #0076CE; 
+            color: white; 
+            border-radius: 8px; 
+            font-weight: bold; 
+        }
+        
+        .btn-nuevo:hover { 
+            background-color: #005fa3; 
+            color: white; 
+        }
+
+        .alert { 
+            margin-bottom: 20px; 
+        }
+
+        /* Debug panel styles */
+        .alert-warning.border-dashed {
+            background-color: #fff3cd;
+            border-color: #ffc107 !important;
+        }
+        
+        details summary {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        details summary:hover {
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ========== SIDEBAR ========== -->
+    <div class="sidebar">
+        <h5></i> Dashboard</h5>
+        <a href="{% url 'dashboard_admin' %}"> Inicio</a>
+        <a href="{% url 'dashboard_admin' %}"> Gestión de Usuarios</a>
+
+        <a href="{% url 'productos:inventario' %}"> Productos</a>
+
+        <a href="{% url 'categorias:lista' %}"></i> Categorías</a>
+        
+        <a href="{% url 'proveedores:lista' %}"></i> Proveedores</a>
+        
+        <a href="{% url 'compras:ver_compras' %}" class="active">
+             Compras
+        </a>
+        
+        <a href="#"> Reportes</a>
+
+        <a "{% url 'compras:compras_desactivadas' %}">
+            Ver inactivos
+        </a>
+        
+        <hr>
+        <a href="{% url 'logout' %}"></i> Cerrar sesión</a>
+    </div>
+
+    <!-- ========== CONTENIDO PRINCIPAL ========== -->
+    <div class="content-wrapper">
+        <div class="container main-card">
+            
+            <!-- Header: Título + Botón Crear -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">
+                    <i class="fas fa-shopping-cart text-primary"></i> 
+                    Gestión de Compras
+                </h2>
+                <a href="{% url 'compras:crear_compra' %}" class="btn btn-nuevo px-4">
+                    <i class="fas fa-plus"></i> Crear Compra
+                </a>
+            </div>
+
+            <!-- 🔍 PANEL DE DEBUG (Solo en desarrollo) -->
+            {% if debug_info and settings.DEBUG %}
+            <div class="alert alert-warning border-dashed" style="border: 2px dashed #dc3545;">
+                <h5 class="mb-2">🔍 DEBUG INFO (Solo desarrollo)</h5>
+                
+                <details open>
+                    <summary class="fw-bold">📦 POST Data completo</summary>
+                    <pre class="bg-dark text-light p-2 rounded small" style="max-height: 200px; overflow-y: auto;">
+{{ debug_info.post_data|pprint }}
+                    </pre>
+                </details>
+                
+                <details class="mt-2">
+                    <summary class="fw-bold">🎯 proveedor_id RAW</summary>
+                    <code class="bg-secondary text-white px-2 py-1 rounded">
+                        {{ debug_info.proveedor_id_raw }}
+                    </code>
+                </details>
+                
+                <details class="mt-2">
+                    <summary class="fw-bold">🛒 Productos enviados ({{ debug_info.productos_raw|length }})</summary>
+                    <pre class="bg-dark text-light p-2 rounded small" style="max-height: 150px; overflow-y: auto;">
+{{ debug_info.productos_raw|pprint }}
+                    </pre>
+                </details>
+                
+                <small class="text-muted d-block mt-2">
+                    💡 Si <code>proveedor_id_raw</code> dice <code>''</code> o <code>None</code>, 
+                    el <code>&lt;select&gt;</code> no está enviando el valor.
+                </small>
+            </div>
+            {% endif %}
+            <!-- 🔚 FIN DEBUG PANEL -->
+
+            <!-- ✅ Mensajes de Django (Éxito/Error) -->
+            {% if messages %}
+            <div class="messages mb-3">
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 📋 Listado de Compras -->
+            {% for compra_data in compras %}
+            <div class="card">
+                <!-- Cabecera de la compra -->
+                <div class="card-header bg-primary-custom">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <i class="fas fa-shopping-cart"></i> 
+                            Compra #{{ compra_data.compra.id_compra }}
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <i class="fas fa-calendar"></i> 
+                            {{ compra.compra.fecha|date:"d/m/Y H:i" }}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <i class="fas fa-truck"></i> 
+                            {{ compra_data.compra.proveedor.nomProv }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cuerpo: Tabla de detalles -->
+                <div class="card-body">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unit.</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in compra_data.detalles %}
+                            <tr>
+                                <td>{{ item.detalle.inventario.producto.nomProducto }}</td>
+                                <td>{{ item.detalle.cantidad }}</td>
+                                <td>Bs {{ item.precio_unitario|floatformat:2 }}</td>
+                                <td class="text-end">Bs {{ item.subtotal|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Total y Botones -->
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <h4 class="text-primary mb-0">
+                            Total: Bs {{ compra_data.compra.total|floatformat:2 }}
+                        </h4>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'compras:editar_compra' compra_data.compra.id_compra %}" 
+                               class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <a href="{% url 'compras:eliminar_compra' compra_data.compra.id_compra %}" 
+                               class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <!-- Estado vacío: No hay compras -->
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle"></i> 
+                No hay compras activas registradas
+            </div>
+            {% endfor %}
+
+            
+
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

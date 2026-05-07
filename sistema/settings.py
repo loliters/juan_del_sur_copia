@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'inventario',   # ← AGREGAR
     'ventas',       # ← AGREGAR
     'metodopago',   # ← AGREGAR
+    'compras'
 ]
 
 MIDDLEWARE = [
