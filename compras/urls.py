@@ -12,6 +12,13 @@ urlpatterns = [
     path('activar/<int:id>/', views.activar_compra, name='activar_compra'),
 
     path('<int:id_compra>/detalle/', views.detalle_compra, name='detalle_compra'),
+
+      # Impresión HTML (abre en nueva pestaña)
+    path('imprimir/<int:id_compra>/', views.imprimir_compra_html, name='imprimir_compra'),
+    
+    # PDF para descargar
+    path('pdf/<int:id_compra>/', views.generar_pdf_compra, name='pdf_compra'),
+
     # AJAX
     path('ajax/agregar-carrito/', views.agregar_al_carrito_compra_ajax, name='agregar_carrito_ajax'),
     path('ajax/actualizar-cantidad/', views.actualizar_cantidad_carrito_compra, name='actualizar_cantidad_ajax'),

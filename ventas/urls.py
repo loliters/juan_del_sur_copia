@@ -16,6 +16,12 @@ urlpatterns = [
     
     #Detalle Venta luego de confirmar compra
     path('<int:id_venta>/detalle/', views.detalle_venta, name='detalle_venta'),
+    
+    # Impresión HTML (abre en nueva pestaña)
+    path('imprimir/<int:id_venta>/', views.imprimir_venta_html, name='imprimir_venta'),
+    
+    # PDF para descargar
+    path('pdf/<int:id_venta>/', views.generar_pdf_venta, name='pdf_venta'),
 
     # AJAX endpoints para carrito (ESTAS 3 SON LAS IMPORTANTES)
     path('agregar-al-carrito/', views.agregar_al_carrito_ajax, name='agregar_al_carrito'),

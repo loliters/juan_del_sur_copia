@@ -677,19 +677,172 @@ def buscar_productos_ajax(request):
 # =========================
 # DETALLE DE VENTA
 #==========================
+
+
+# =============================================================================
+# FUNCIONES DE IMPRESIÓN Y PDF PARA VENTAS INDIVIDUALES
+# =============================================================================
+
 from django.shortcuts import render, get_object_or_404
-from ventas.models import Venta, DetalleVenta
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.utils import timezone
+from fpdf import FPDF
+import io
+
+from ventas.models import Venta, DetalleVenta
+
+
+class PDFVentaIndividual(FPDF):
+    """Clase PDF para factura de venta individual (formato formal)"""
+    
+    def header(self):
+        self.set_font('Helvetica', 'B', 16)
+        self.cell(0, 10, 'JUAN DEL SUR', 0, 1, 'C')
+        self.set_font('Helvetica', '', 10)
+        self.cell(0, 5, 'NIT: 1234567890', 0, 1, 'C')
+        self.ln(5)
+        self.set_font('Helvetica', 'B', 14)
+        self.cell(0, 10, 'FACTURA DE VENTA', 0, 1, 'C')
+        self.ln(5)
+        self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(5)
+    
+    def footer(self):
+        self.set_y(-25)
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 5, 'Gracias por su compra', 0, 0, 'C')
+        self.ln(4)
+        self.cell(0, 5, f'Impreso: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 0, 'C')
+    
+    def section_title(self, title):
+        self.set_font('Helvetica', 'B', 10)
+        self.set_fill_color(37, 99, 235)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 8, f' {title}', 0, 1, 'L', 1)
+        self.set_text_color(0, 0, 0)
+        self.ln(2)
+    
+    def info_row(self, label, value):
+        self.set_font('Helvetica', 'B', 9)
+        self.cell(40, 5, f'{label}:', 0, 0)
+        self.set_font('Helvetica', '', 9)
+        self.cell(0, 5, str(value), 0, 1)
+
 
 def detalle_venta(request, id_venta):
-    venta = get_object_or_404(Venta, id_venta=id_venta)
-    detalles = DetalleVenta.objects.filter(venta=venta).select_related(
-        'inventario__producto'
+    """Vista para mostrar el detalle de una venta (después de crearla)"""
+    venta = get_object_or_404(
+        Venta.objects.select_related('cliente', 'metodo_pago'), 
+        id_venta=id_venta
     )
+    detalles = DetalleVenta.objects.select_related(
+        'inventario__producto'
+    ).filter(venta=venta)
     
     context = {
         'venta': venta,
         'detalles': detalles,
-        'fecha_actual': timezone.now().strftime('%Y-%m-%d'),
+        'fecha_actual': timezone.now().strftime('%Y-%m-%d')
     }
     return render(request, 'ventas/detalle_venta.html', context)
+
+
+def imprimir_venta_html(request, id_venta):
+    """Vista HTML para imprimir venta (formato formal)"""
+    venta = get_object_or_404(
+        Venta.objects.select_related('cliente', 'metodo_pago'), 
+        id_venta=id_venta
+    )
+    detalles = DetalleVenta.objects.select_related(
+        'inventario__producto'
+    ).filter(venta=venta)
+    
+    context = {
+        'venta': venta,
+        'detalles': detalles,
+        'cliente': venta.cliente,
+        'fecha_impresion': timezone.now()
+    }
+    
+    # Renderiza el template HTML formal (puedes copiar venta_print.html de reportes)
+    html_string = render_to_string('ventas/venta_print.html', context)
+    return HttpResponse(html_string)
+
+
+def generar_pdf_venta(request, id_venta):
+    """Generar PDF de venta individual para descargar"""
+    venta = get_object_or_404(
+        Venta.objects.select_related('cliente', 'metodo_pago'), 
+        id_venta=id_venta
+    )
+    detalles = DetalleVenta.objects.select_related(
+        'inventario__producto'
+    ).filter(venta=venta)
+    
+    buffer = io.BytesIO()
+    pdf = PDFVentaIndividual()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Cliente
+    cliente = venta.cliente
+    pdf.section_title('Información del Cliente')
+    pdf.info_row('Nombre', cliente.nombre)
+    if cliente.razonSocial:
+        pdf.info_row('Razon Social', cliente.razonSocial)
+    pdf.info_row('Carnet', cliente.carnet)
+    pdf.info_row('Telefono', cliente.telefono)
+    pdf.info_row('Email', cliente.email)
+    pdf.info_row('Direccion', f"{cliente.zona}, {cliente.calle} #{cliente.numeroCasa}")
+    pdf.ln(3)
+    
+    # Venta
+    pdf.section_title('Información de la Venta')
+    pdf.info_row('Numero de Venta', f"#{venta.id_venta}")
+    pdf.info_row('Fecha', venta.fecha.strftime("%d/%m/%Y %H:%M"))
+    pdf.info_row('Metodo de Pago', venta.metodo_pago.tipoPago)
+    pdf.ln(5)
+    
+    # Tabla de productos
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(37, 99, 235)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(25, 8, 'Codigo', 1, 0, 'C', 1)
+    pdf.cell(70, 8, 'Producto', 1, 0, 'L', 1)
+    pdf.cell(20, 8, 'Cant.', 1, 0, 'C', 1)
+    pdf.cell(30, 8, 'P. Unit.', 1, 0, 'R', 1)
+    pdf.cell(30, 8, 'Subtotal', 1, 1, 'R', 1)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 9)
+    
+    for detalle in detalles:
+        producto = detalle.inventario.producto
+        pdf.cell(25, 7, producto.codProducto or '', 1, 0, 'C')
+        pdf.cell(70, 7, producto.nomProducto[:35], 1, 0, 'L')
+        pdf.cell(20, 7, str(detalle.cantidad), 1, 0, 'C')
+        pdf.cell(30, 7, f"Bs {float(producto.precioVenta):.2f}", 1, 0, 'R')
+        pdf.cell(30, 7, f"Bs {float(detalle.subtotal):.2f}", 1, 1, 'R')
+    
+    # Total
+    pdf.ln(5)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(145, 10, 'TOTAL:', 0, 0, 'R')
+    pdf.set_text_color(37, 99, 235)
+    pdf.cell(40, 10, f"Bs {float(venta.total):.2f}", 0, 1, 'R')
+    pdf.set_text_color(0, 0, 0)
+    
+    # Firmas
+    pdf.ln(20)
+    pdf.set_font('Helvetica', '', 9)
+    pdf.cell(90, 10, '_________________________', 0, 0, 'C')
+    pdf.cell(90, 10, '_________________________', 0, 1, 'C')
+    pdf.cell(90, 5, 'Firma del Cliente', 0, 0, 'C')
+    pdf.cell(90, 5, 'Firma del Vendedor', 0, 1, 'C')
+    
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="venta_{id_venta}.pdf"'
+    return response

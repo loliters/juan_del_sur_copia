@@ -163,7 +163,7 @@ def crear_compra(request):
                 del request.session['carrito_compra']
             
             messages.success(request, f'✅ Compra #{compra.id_compra} registrada - Stock reabastecido correctamente')
-            return redirect('compras:detalle_compra')
+            return redirect('compras:detalle_compra', id_compra=compra.id_compra)
             
         except Proveedor.DoesNotExist:
             messages.error(request, 'Proveedor no encontrado')
@@ -564,3 +564,172 @@ def detalle_compra(request, id_compra):
         'fecha_actual': timezone.now().strftime('%Y-%m-%d'),
     }
     return render(request, 'compras/detalle_compra.html', context)
+
+
+
+
+
+# =============================================================================
+# FUNCIONES DE IMPRESIÓN Y PDF PARA COMPRAS INDIVIDUALES
+# =============================================================================
+
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.utils import timezone
+from fpdf import FPDF
+import io
+
+from compras.models import Compra, DetalleCompra
+
+
+class PDFCompraIndividual(FPDF):
+    """Clase PDF para orden de compra individual (formato formal)"""
+    
+    def header(self):
+        self.set_font('Helvetica', 'B', 16)
+        self.cell(0, 10, 'JUAN DEL SUR', 0, 1, 'C')
+        self.set_font('Helvetica', '', 10)
+        self.cell(0, 5, 'NIT: 1234567890', 0, 1, 'C')
+        self.ln(5)
+        self.set_font('Helvetica', 'B', 14)
+        self.cell(0, 10, 'ORDEN DE COMPRA', 0, 1, 'C')
+        self.ln(5)
+        self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(5)
+    
+    def footer(self):
+        self.set_y(-25)
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 5, 'Documento de compra oficial', 0, 0, 'C')
+        self.ln(4)
+        self.cell(0, 5, f'Impreso: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 0, 'C')
+    
+    def section_title(self, title):
+        self.set_font('Helvetica', 'B', 10)
+        self.set_fill_color(37, 99, 235)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 8, f' {title}', 0, 1, 'L', 1)
+        self.set_text_color(0, 0, 0)
+        self.ln(2)
+    
+    def info_row(self, label, value):
+        self.set_font('Helvetica', 'B', 9)
+        self.cell(40, 5, f'{label}:', 0, 0)
+        self.set_font('Helvetica', '', 9)
+        self.cell(0, 5, str(value), 0, 1)
+
+
+def detalle_compra(request, id_compra):
+    """Vista para mostrar el detalle de una compra (después de crearla)"""
+    compra = get_object_or_404(
+        Compra.objects.select_related('proveedor'), 
+        id_compra=id_compra
+    )
+    detalles = DetalleCompra.objects.select_related(
+        'inventario__producto'
+    ).filter(compra=compra)
+    
+    context = {
+        'compra': compra,
+        'detalles': detalles,
+    }
+    return render(request, 'compras/detalle_compra.html', context)
+
+
+def imprimir_compra_html(request, id_compra):
+    """Vista HTML para imprimir compra (formato formal)"""
+    compra = get_object_or_404(
+        Compra.objects.select_related('proveedor'), 
+        id_compra=id_compra
+    )
+    detalles = DetalleCompra.objects.select_related(
+        'inventario__producto'
+    ).filter(compra=compra)
+    
+    context = {
+        'compra': compra,
+        'detalles': detalles,
+        'proveedor': compra.proveedor,
+        'fecha_impresion': timezone.now()
+    }
+    
+    # Renderiza el template HTML formal (puedes copiar compra_print.html de reportes)
+    html_string = render_to_string('compras/compra_print.html', context)
+    return HttpResponse(html_string)
+
+
+def generar_pdf_compra(request, id_compra):
+    """Generar PDF de compra individual para descargar"""
+    compra = get_object_or_404(
+        Compra.objects.select_related('proveedor'), 
+        id_compra=id_compra
+    )
+    detalles = DetalleCompra.objects.select_related(
+        'inventario__producto'
+    ).filter(compra=compra)
+    
+    buffer = io.BytesIO()
+    pdf = PDFCompraIndividual()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Proveedor
+    proveedor = compra.proveedor
+    pdf.section_title('Información del Proveedor')
+    pdf.info_row('Nombre', proveedor.nomProv)
+    pdf.info_row('Direccion', proveedor.direccion)
+    pdf.info_row('Telefono', proveedor.telefono)
+    pdf.info_row('Email', proveedor.email)
+    pdf.ln(3)
+    
+    # Compra
+    pdf.section_title('Información de la Compra')
+    pdf.info_row('Numero de Compra', f"#{compra.id_compra}")
+    pdf.info_row('Fecha', compra.fecha.strftime("%d/%m/%Y %H:%M"))
+    pdf.info_row('Estado', 'Activa' if compra.estado else 'Inactiva')
+    pdf.ln(5)
+    
+    # Tabla de productos
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(37, 99, 235)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(25, 8, 'Codigo', 1, 0, 'C', 1)
+    pdf.cell(70, 8, 'Producto', 1, 0, 'L', 1)
+    pdf.cell(20, 8, 'Cant.', 1, 0, 'C', 1)
+    pdf.cell(30, 8, 'P. Unit.', 1, 0, 'R', 1)
+    pdf.cell(30, 8, 'Subtotal', 1, 1, 'R', 1)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 9)
+    
+    for detalle in detalles:
+        producto = detalle.inventario.producto
+        subtotal = detalle.cantidad * producto.precioCompra
+        pdf.cell(25, 7, producto.codProducto or '', 1, 0, 'C')
+        pdf.cell(70, 7, producto.nomProducto[:35], 1, 0, 'L')
+        pdf.cell(20, 7, str(detalle.cantidad), 1, 0, 'C')
+        pdf.cell(30, 7, f"Bs {float(producto.precioCompra):.2f}", 1, 0, 'R')
+        pdf.cell(30, 7, f"Bs {float(subtotal):.2f}", 1, 1, 'R')
+    
+    # Total
+    pdf.ln(5)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(145, 10, 'TOTAL:', 0, 0, 'R')
+    pdf.set_text_color(37, 99, 235)
+    pdf.cell(40, 10, f"Bs {float(compra.total):.2f}", 0, 1, 'R')
+    pdf.set_text_color(0, 0, 0)
+    
+    # Firmas
+    pdf.ln(20)
+    pdf.set_font('Helvetica', '', 9)
+    pdf.cell(90, 10, '_________________________', 0, 0, 'C')
+    pdf.cell(90, 10, '_________________________', 0, 1, 'C')
+    pdf.cell(90, 5, 'Firma del Proveedor', 0, 0, 'C')
+    pdf.cell(90, 5, 'Resp. de Compras', 0, 1, 'C')
+    
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="compra_{id_compra}.pdf"'
+    return response
