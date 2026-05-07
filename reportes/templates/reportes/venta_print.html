@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Venta #{{ venta.id_venta }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 11pt; margin: 2cm; }
+        .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
+        .company { font-size: 18pt; font-weight: bold; color: #2563eb; }
+        .title { font-size: 14pt; font-weight: bold; margin-top: 10px; }
+        .section { margin-bottom: 15px; }
+        .section-title { font-weight: bold; color: #2563eb; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+        .info { margin-bottom: 5px; }
+        .info-label { font-weight: bold; display: inline-block; width: 120px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #2563eb; color: white; padding: 8px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .total { text-align: right; font-size: 14pt; font-weight: bold; margin-top: 20px; }
+        .total-value { color: #2563eb; }
+        .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
+        .signature { text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; margin-top: 50px; }
+        @media print { body { margin: 1cm; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company">TU EMPRESA</div>
+        <div>NIT: 1234567890</div>
+        <div class="title">FACTURA DE VENTA</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Información del Cliente</div>
+        <div class="info"><span class="info-label">Nombre:</span> {{ cliente.nombre }}</div>
+        {% if cliente.razonSocial %}<div class="info"><span class="info-label">Razón Social:</span> {{ cliente.razonSocial }}</div>{% endif %}
+        <div class="info"><span class="info-label">Carnet:</span> {{ cliente.carnet }}</div>
+        <div class="info"><span class="info-label">Teléfono:</span> {{ cliente.telefono }}</div>
+        <div class="info"><span class="info-label">Email:</span> {{ cliente.email }}</div>
+        <div class="info"><span class="info-label">Dirección:</span> {{ cliente.zona }}, {{ cliente.calle }} #{{ cliente.numeroCasa }}</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Información de la Venta</div>
+        <div class="info"><span class="info-label">Número:</span> #{{ venta.id_venta }}</div>
+        <div class="info"><span class="info-label">Fecha:</span> {{ venta.fecha|date:"d/m/Y H:i" }}</div>
+        <div class="info"><span class="info-label">Método de Pago:</span> {{ venta.metodo_pago.tipoPago }}</div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th style="text-align: right;">Precio Unit.</th>
+                <th style="text-align: right;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detalle in detalles %}
+            <tr>
+                <td>{{ detalle.inventario.producto.codProducto }}</td>
+                <td>{{ detalle.inventario.producto.nomProducto }}</td>
+                <td style="text-align: center;">{{ detalle.cantidad }}</td>
+                <td style="text-align: right;">Bs {{ detalle.inventario.producto.precioVenta|floatformat:2 }}</td>
+                <td style="text-align: right;">Bs {{ detalle.subtotal|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="total">
+        TOTAL: <span class="total-value">Bs {{ venta.total|floatformat:2 }}</span>
+    </div>
+    
+    <div class="signatures">
+        <div class="signature">Firma del Cliente</div>
+        <div class="signature">Firma del Vendedor</div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; font-size: 9pt; color: #666;">
+        Impreso: {{ fecha_impresion|date:"d/m/Y H:i:s" }}
+    </div>
+</body>
+</html>

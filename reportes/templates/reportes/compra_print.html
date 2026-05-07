@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Compra #{{ compra.id_compra }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 11pt; margin: 2cm; }
+        .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 15px; margin-bottom: 20px; }
+        .company { font-size: 18pt; font-weight: bold; color: #2563eb; }
+        .title { font-size: 14pt; font-weight: bold; margin-top: 10px; }
+        .section { margin-bottom: 15px; }
+        .section-title { font-weight: bold; color: #2563eb; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+        .info { margin-bottom: 5px; }
+        .info-label { font-weight: bold; display: inline-block; width: 120px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #2563eb; color: white; padding: 8px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .total { text-align: right; font-size: 14pt; font-weight: bold; margin-top: 20px; }
+        .total-value { color: #2563eb; }
+        .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
+        .signature { text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; margin-top: 50px; }
+        @media print { body { margin: 1cm; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company">TU EMPRESA</div>
+        <div>NIT: 1234567890</div>
+        <div class="title">ORDEN DE COMPRA</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Información del Proveedor</div>
+        <div class="info"><span class="info-label">Nombre:</span> {{ proveedor.nomProv }}</div>
+        <div class="info"><span class="info-label">Dirección:</span> {{ proveedor.direccion }}</div>
+        <div class="info"><span class="info-label">Teléfono:</span> {{ proveedor.telefono }}</div>
+        <div class="info"><span class="info-label">Email:</span> {{ proveedor.email }}</div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Información de la Compra</div>
+        <div class="info"><span class="info-label">Número:</span> #{{ compra.id_compra }}</div>
+        <div class="info"><span class="info-label">Fecha:</span> {{ compra.fecha|date:"d/m/Y H:i" }}</div>
+        <div class="info"><span class="info-label">Estado:</span> {% if compra.estado %}Activa{% else %}Inactiva{% endif %}</div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Cant.</th>
+                <th style="text-align: right;">Precio Unit.</th>
+                <th style="text-align: right;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detalle in detalles %}
+            <tr>
+                <td>{{ detalle.inventario.producto.codProducto }}</td>
+                <td>{{ detalle.inventario.producto.nomProducto }}</td>
+                <td style="text-align: center;">{{ detalle.cantidad }}</td>
+                <td style="text-align: right;">Bs {{ detalle.inventario.producto.precioCompra|floatformat:2 }}</td>
+                <td style="text-align: right;">Bs {{ detalle.cantidad|multiply:detalle.inventario.producto.precioCompra|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="total">
+        TOTAL: <span class="total-value">Bs {{ compra.total|floatformat:2 }}</span>
+    </div>
+    
+    <div class="signatures">
+        <div class="signature">Firma del Proveedor</div>
+        <div class="signature">Resp. de Compras</div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; font-size: 9pt; color: #666;">
+        Impreso: {{ fecha_impresion|date:"d/m/Y H:i:s" }}
+    </div>
+</body>
+</html>
