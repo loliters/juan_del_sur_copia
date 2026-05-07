@@ -488,6 +488,7 @@ def registro_venta(request):
                     cantidad=item['cantidad'],
                     subtotal=item['subtotal']
                 )
+                
             
             # Limpiar carrito y cliente
             request.session['carrito'] = {'items': [], 'total': 0}
@@ -495,10 +496,12 @@ def registro_venta(request):
             
             messages.success(request, f' Venta #{venta.id_venta} registrada por Bs{venta.total}')
             
+
         except Exception as e:
             messages.error(request, f' Error: {str(e)}')
         
-        return redirect('dashboard_cajero')
+        #  Redirigir al detalle de la venta recién creada
+        return redirect('ventas:detalle_venta', id_venta=venta.id_venta)
     
     return redirect('dashboard_cajero')
 #nuevas cosas
@@ -670,3 +673,23 @@ def buscar_productos_ajax(request):
             } for p in productos]
             return JsonResponse({'success': True, 'productos': data})
     return JsonResponse({'success': False, 'productos': []})
+
+# =========================
+# DETALLE DE VENTA
+#==========================
+from django.shortcuts import render, get_object_or_404
+from ventas.models import Venta, DetalleVenta
+from django.utils import timezone
+
+def detalle_venta(request, id_venta):
+    venta = get_object_or_404(Venta, id_venta=id_venta)
+    detalles = DetalleVenta.objects.filter(venta=venta).select_related(
+        'inventario__producto'
+    )
+    
+    context = {
+        'venta': venta,
+        'detalles': detalles,
+        'fecha_actual': timezone.now().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'ventas/detalle_venta.html', context)

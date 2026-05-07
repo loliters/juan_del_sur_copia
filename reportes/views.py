@@ -1,13 +1,12 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Prefetch
 from django.template.loader import render_to_string
 from django.utils import timezone
 from datetime import datetime, timedelta
-from fpdf import FPDF  # <-- Usamos FPDF2
+from fpdf import FPDF
 import io
 import os
-from django.db.models import Prefetch
 
 # Models
 from ventas.models import Venta, DetalleVenta
@@ -18,6 +17,12 @@ from inventario.models import Inventario
 from productos.models import Producto
 from categorias.models import Categoria
 
+from .utils import PDFReporteGeneral
+
+
+# =============================================================================
+# FUNCIONES AUXILIARES
+# =============================================================================
 
 def get_date_range(filter_type, custom_from=None, custom_to=None):
     """Obtiene el rango de fechas según el filtro seleccionado"""
@@ -47,13 +52,10 @@ def get_date_range(filter_type, custom_from=None, custom_to=None):
 
 def filtrar_ventas(request):
     """Lógica de filtrado para ventas"""
-    
-    # ✅ Carga los detalles con producto relacionado
     ventas = Venta.objects.select_related('cliente', 'metodo_pago').prefetch_related(
         Prefetch('detalles', queryset=DetalleVenta.objects.select_related('inventario__producto'))
     ).all()
     
-    # Filtros
     filtro_fecha = request.GET.get('filtro_fecha', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
@@ -68,7 +70,6 @@ def filtrar_ventas(request):
     # Filtrar por producto
     if producto_filter:
         if producto_filter == 'mas_vendido':
-            from django.db.models import Sum
             detalles = DetalleVenta.objects.values('inventario__producto').annotate(
                 total_cantidad=Sum('cantidad')
             ).order_by('-total_cantidad')
@@ -90,14 +91,15 @@ def filtrar_ventas(request):
 
 def filtrar_compras(request):
     """Lógica de filtrado para compras"""
-    compras = Compra.objects.select_related('proveedor').all()
+    compras = Compra.objects.select_related('proveedor').prefetch_related(
+        Prefetch('detalles', queryset=DetalleCompra.objects.select_related('inventario__producto'))
+    ).all()
     
-    # Filtros
     filtro_fecha = request.GET.get('filtro_fecha', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
     producto_filter = request.GET.get('producto', '')
-    categoria_filter = request.GET.get('categoria', '')  # Ahora será ID
+    categoria_filter = request.GET.get('categoria', '')
     proveedor_filter = request.GET.get('proveedor', '')
     estado_inventario = request.GET.get('estado_inventario', '')
     
@@ -113,22 +115,18 @@ def filtrar_compras(request):
     # Filtrar por producto
     if producto_filter:
         if producto_filter == 'mas_comprado':
-            from django.db.models import Sum
             detalles = DetalleCompra.objects.values('inventario__producto').annotate(
                 total_cantidad=Sum('cantidad')
             ).order_by('-total_cantidad')
             if detalles:
                 producto_id = detalles[0]['inventario__producto']
-                # ✅ Usa 'detalles' (related_name)
                 compras = compras.filter(detalles__inventario__producto_id=producto_id)
         else:
-            # ✅ Usa 'detalles' (related_name)
             compras = compras.filter(detalles__inventario__producto_id=producto_filter)
     
-    # Filtrar por categoría (ahora recibe ID)
+    # Filtrar por categoría
     if categoria_filter and categoria_filter != '':
         try:
-            # ✅ Usa 'detalles' (related_name)
             compras = compras.filter(detalles__inventario__producto__categoria_id=categoria_filter)
         except:
             pass
@@ -145,25 +143,25 @@ def filtrar_compras(request):
     return compras.distinct()
 
 
+# =============================================================================
+# VISTAS PRINCIPALES DE REPORTES
+# =============================================================================
+
 def ventas_report(request):
     """Vista principal del reporte de ventas"""
     ventas = filtrar_ventas(request)
     
-    # Calcular totales
     total_vendido = ventas.aggregate(total=Sum('total'))['total'] or 0
     cant_ventas = ventas.count()
     
-    # Datos para filtros
     productos = Producto.objects.filter(estado='activo').select_related('categoria')
     categorias = Categoria.objects.filter(estado=True)
     clientes = Cliente.objects.filter(estado=True)
     
-    # Fecha del reporte
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
     filtro_fecha = request.GET.get('filtro_fecha', '')
     
-    # Determinar rango de fechas para mostrar
     from_date, to_date = get_date_range(filtro_fecha, fecha_desde, fecha_hasta)
     if from_date and to_date:
         fecha_reporte = f"{from_date.strftime('%Y-%m-%d')} - {to_date.strftime('%Y-%m-%d')}"
@@ -190,21 +188,17 @@ def compras_report(request):
     """Vista principal del reporte de compras"""
     compras = filtrar_compras(request)
     
-    # Calcular totales
     total_comprado = compras.aggregate(total=Sum('total'))['total'] or 0
     ordenes_realizadas = compras.count()
     
-    # Datos para filtros
     productos = Producto.objects.filter(estado='activo').select_related('categoria')
     categorias = Categoria.objects.filter(estado=True)
     proveedores = Proveedor.objects.filter(estado=True)
     
-    # Fecha del reporte
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
     filtro_fecha = request.GET.get('filtro_fecha', '')
     
-    # Determinar rango de fechas para mostrar
     from_date, to_date = get_date_range(filtro_fecha, fecha_desde, fecha_hasta)
     if from_date and to_date:
         fecha_reporte = f"{from_date.strftime('%Y-%m-%d')} - {to_date.strftime('%Y-%m-%d')}"
@@ -226,158 +220,35 @@ def compras_report(request):
     
     return render(request, 'reportes/compras_report.html', context)
 
+
+# =============================================================================
+# CLASES PDF PARA FACTURAS INDIVIDUALES
+# =============================================================================
+
 class PDFVenta(FPDF):
     """Clase PDF personalizada para facturas de venta"""
     
     def header(self):
-        # Logo o nombre de empresa
-        self.set_font('Arial', 'B', 16)
+        self.set_font('Helvetica', 'B', 16)
         self.cell(0, 10, 'TU EMPRESA', 0, 1, 'C')
-        self.set_font('Arial', '', 10)
+        self.set_font('Helvetica', '', 10)
         self.cell(0, 5, 'NIT: 1234567890', 0, 1, 'C')
         self.ln(5)
-        
-        # Título del documento
-        self.set_font('Arial', 'B', 14)
+        self.set_font('Helvetica', 'B', 14)
         self.cell(0, 10, 'FACTURA DE VENTA', 0, 1, 'C')
         self.ln(5)
-        
-        # Línea separadora
         self.line(10, self.get_y(), 200, self.get_y())
         self.ln(5)
     
     def footer(self):
         self.set_y(-25)
-        self.set_font('Arial', 'I', 8)
+        self.set_font('Helvetica', 'I', 8)
         self.cell(0, 5, 'Gracias por su compra', 0, 0, 'C')
         self.ln(4)
         self.cell(0, 5, f'Impreso: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 0, 'C')
     
     def section_title(self, title):
-        self.set_font('Arial', 'B', 10)
-        self.set_fill_color(37, 99, 235)  # Azul
-        self.set_text_color(255, 255, 255)
-        self.cell(0, 8, f' {title}', 0, 1, 'L', 1)
-        self.set_text_color(0, 0, 0)
-        self.ln(2)
-    
-    def info_row(self, label, value):
-        self.set_font('Arial', 'B', 9)
-        self.cell(40, 5, f'{label}:', 0, 0)
-        self.set_font('Arial', '', 9)
-        self.cell(0, 5, str(value), 0, 1)
-
-
-def generar_pdf_venta(request, id_venta):
-    """Generar PDF de venta usando FPDF2"""
-    venta = get_object_or_404(
-        Venta.objects.select_related('cliente', 'metodo_pago'), 
-        id_venta=id_venta
-    )
-    detalles = DetalleVenta.objects.select_related(
-        'inventario__producto'
-    ).filter(venta=venta)
-    
-    # Crear PDF
-    pdf = PDFVenta()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # Información del cliente
-    cliente = venta.cliente
-    pdf.section_title('Información del Cliente')
-    pdf.info_row('Nombre', cliente.nombre)
-    if cliente.razonSocial:
-        pdf.info_row('Razón Social', cliente.razonSocial)
-    pdf.info_row('Carnet', cliente.carnet)
-    pdf.info_row('Teléfono', cliente.telefono)
-    pdf.info_row('Email', cliente.email)
-    pdf.info_row('Dirección', f"{cliente.zona}, {cliente.calle} #{cliente.numeroCasa}")
-    pdf.ln(3)
-    
-    # Información de la venta
-    pdf.section_title('Información de la Venta')
-    pdf.info_row('Número de Venta', f"#{venta.id_venta}")
-    pdf.info_row('Fecha', venta.fecha.strftime("%d/%m/%Y %H:%M"))
-    pdf.info_row('Método de Pago', venta.metodo_pago.tipoPago)
-    pdf.ln(5)
-    
-    # Tabla de detalles
-    pdf.set_font('Arial', 'B', 9)
-    pdf.set_fill_color(37, 99, 235)
-    pdf.set_text_color(255, 255, 255)
-    
-    # Encabezados de tabla
-    pdf.cell(25, 8, 'Código', 1, 0, 'C', 1)
-    pdf.cell(70, 8, 'Producto', 1, 0, 'L', 1)
-    pdf.cell(20, 8, 'Cant.', 1, 0, 'C', 1)
-    pdf.cell(30, 8, 'Precio Unit.', 1, 0, 'R', 1)
-    pdf.cell(30, 8, 'Subtotal', 1, 1, 'R', 1)
-    
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', '', 9)
-    
-    # Filas de detalles
-    for detalle in detalles:
-        producto = detalle.inventario.producto
-        pdf.cell(25, 7, producto.codProducto or '', 1, 0, 'C')
-        pdf.cell(70, 7, producto.nomProducto[:35], 1, 0, 'L')
-        pdf.cell(20, 7, str(detalle.cantidad), 1, 0, 'C')
-        pdf.cell(30, 7, f"Bs {producto.precioVenta:.2f}", 1, 0, 'R')
-        pdf.cell(30, 7, f"Bs {detalle.subtotal:.2f}", 1, 1, 'R')
-    
-    # Total
-    pdf.ln(5)
-    pdf.set_font('Arial', 'B', 12)
-    pdf.cell(145, 10, 'TOTAL:', 0, 0, 'R')
-    pdf.set_text_color(37, 99, 235)
-    pdf.cell(40, 10, f"Bs {venta.total:.2f}", 0, 1, 'R')
-    pdf.set_text_color(0, 0, 0)
-    
-    # Firmas
-    pdf.ln(20)
-    pdf.set_font('Arial', '', 9)
-    pdf.cell(90, 10, '_________________________', 0, 0, 'C')
-    pdf.cell(90, 10, '_________________________', 0, 1, 'C')
-    pdf.cell(90, 5, 'Firma del Cliente', 0, 0, 'C')
-    pdf.cell(90, 5, 'Firma del Vendedor', 0, 1, 'C')
-    
-    # Generar respuesta
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="venta_{id_venta}.pdf"'
-    
-    pdf_output = pdf.output(dest='S').encode('latin-1', errors='ignore')
-    response.write(pdf_output)
-    
-    return response
-
-
-class PDFCompra(FPDF):
-    """Clase PDF personalizada para órdenes de compra"""
-    
-    def header(self):
-        self.set_font('Arial', 'B', 16)
-        self.cell(0, 10, 'TU EMPRESA', 0, 1, 'C')
-        self.set_font('Arial', '', 10)
-        self.cell(0, 5, 'NIT: 1234567890', 0, 1, 'C')
-        self.ln(5)
-        
-        self.set_font('Arial', 'B', 14)
-        self.cell(0, 10, 'ORDEN DE COMPRA', 0, 1, 'C')
-        self.ln(5)
-        
-        self.line(10, self.get_y(), 200, self.get_y())
-        self.ln(5)
-    
-    def footer(self):
-        self.set_y(-25)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 5, 'Documento de compra oficial', 0, 0, 'C')
-        self.ln(4)
-        self.cell(0, 5, f'Impreso: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 0, 'C')
-    
-    def section_title(self, title):
-        self.set_font('Arial', 'B', 10)
+        self.set_font('Helvetica', 'B', 10)
         self.set_fill_color(37, 99, 235)
         self.set_text_color(255, 255, 255)
         self.cell(0, 8, f' {title}', 0, 1, 'L', 1)
@@ -385,56 +256,167 @@ class PDFCompra(FPDF):
         self.ln(2)
     
     def info_row(self, label, value):
-        self.set_font('Arial', 'B', 9)
+        self.set_font('Helvetica', 'B', 9)
         self.cell(40, 5, f'{label}:', 0, 0)
-        self.set_font('Arial', '', 9)
+        self.set_font('Helvetica', '', 9)
         self.cell(0, 5, str(value), 0, 1)
 
 
+class PDFCompra(FPDF):
+    """Clase PDF personalizada para órdenes de compra"""
+    
+    def header(self):
+        self.set_font('Helvetica', 'B', 16)
+        self.cell(0, 10, 'TU EMPRESA', 0, 1, 'C')
+        self.set_font('Helvetica', '', 10)
+        self.cell(0, 5, 'NIT: 1234567890', 0, 1, 'C')
+        self.ln(5)
+        self.set_font('Helvetica', 'B', 14)
+        self.cell(0, 10, 'ORDEN DE COMPRA', 0, 1, 'C')
+        self.ln(5)
+        self.line(10, self.get_y(), 200, self.get_y())
+        self.ln(5)
+    
+    def footer(self):
+        self.set_y(-25)
+        self.set_font('Helvetica', 'I', 8)
+        self.cell(0, 5, 'Documento de compra oficial', 0, 0, 'C')
+        self.ln(4)
+        self.cell(0, 5, f'Impreso: {timezone.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 0, 'C')
+    
+    def section_title(self, title):
+        self.set_font('Helvetica', 'B', 10)
+        self.set_fill_color(37, 99, 235)
+        self.set_text_color(255, 255, 255)
+        self.cell(0, 8, f' {title}', 0, 1, 'L', 1)
+        self.set_text_color(0, 0, 0)
+        self.ln(2)
+    
+    def info_row(self, label, value):
+        self.set_font('Helvetica', 'B', 9)
+        self.cell(40, 5, f'{label}:', 0, 0)
+        self.set_font('Helvetica', '', 9)
+        self.cell(0, 5, str(value), 0, 1)
+
+
+# =============================================================================
+# GENERACIÓN DE PDF INDIVIDUALES (VENTA/COMPRA)
+# =============================================================================
+
+def generar_pdf_venta(request, id_venta):
+    """Generar PDF de venta individual usando io.BytesIO"""
+    venta = get_object_or_404(
+        Venta.objects.select_related('cliente', 'metodo_pago'), 
+        id_venta=id_venta
+    )
+    detalles = DetalleVenta.objects.select_related('inventario__producto').filter(venta=venta)
+    
+    buffer = io.BytesIO()
+    pdf = PDFVenta()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Cliente
+    cliente = venta.cliente
+    pdf.section_title('Información del Cliente')
+    pdf.info_row('Nombre', cliente.nombre)
+    if cliente.razonSocial:
+        pdf.info_row('Razon Social', cliente.razonSocial)
+    pdf.info_row('Carnet', cliente.carnet)
+    pdf.info_row('Telefono', cliente.telefono)
+    pdf.info_row('Email', cliente.email)
+    pdf.info_row('Direccion', f"{cliente.zona}, {cliente.calle} #{cliente.numeroCasa}")
+    pdf.ln(3)
+    
+    # Venta
+    pdf.section_title('Información de la Venta')
+    pdf.info_row('Numero de Venta', f"#{venta.id_venta}")
+    pdf.info_row('Fecha', venta.fecha.strftime("%d/%m/%Y %H:%M"))
+    pdf.info_row('Metodo de Pago', venta.metodo_pago.tipoPago)
+    pdf.ln(5)
+    
+    # Tabla
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(37, 99, 235)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(25, 8, 'Codigo', 1, 0, 'C', 1)
+    pdf.cell(70, 8, 'Producto', 1, 0, 'L', 1)
+    pdf.cell(20, 8, 'Cant.', 1, 0, 'C', 1)
+    pdf.cell(30, 8, 'P. Unit.', 1, 0, 'R', 1)
+    pdf.cell(30, 8, 'Subtotal', 1, 1, 'R', 1)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('Helvetica', '', 9)
+    
+    for detalle in detalles:
+        producto = detalle.inventario.producto
+        pdf.cell(25, 7, producto.codProducto or '', 1, 0, 'C')
+        pdf.cell(70, 7, producto.nomProducto[:35], 1, 0, 'L')
+        pdf.cell(20, 7, str(detalle.cantidad), 1, 0, 'C')
+        pdf.cell(30, 7, f"Bs {float(producto.precioVenta):.2f}", 1, 0, 'R')
+        pdf.cell(30, 7, f"Bs {float(detalle.subtotal):.2f}", 1, 1, 'R')
+    
+    pdf.ln(5)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(145, 10, 'TOTAL:', 0, 0, 'R')
+    pdf.set_text_color(37, 99, 235)
+    pdf.cell(40, 10, f"Bs {float(venta.total):.2f}", 0, 1, 'R')
+    pdf.set_text_color(0, 0, 0)
+    
+    pdf.ln(20)
+    pdf.set_font('Helvetica', '', 9)
+    pdf.cell(90, 10, '_________________________', 0, 0, 'C')
+    pdf.cell(90, 10, '_________________________', 0, 1, 'C')
+    pdf.cell(90, 5, 'Firma del Cliente', 0, 0, 'C')
+    pdf.cell(90, 5, 'Firma del Vendedor', 0, 1, 'C')
+    
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="venta_{id_venta}.pdf"'
+    return response
+
+
 def generar_pdf_compra(request, id_compra):
-    """Generar PDF de compra usando FPDF2"""
+    """Generar PDF de compra individual usando io.BytesIO"""
     compra = get_object_or_404(
         Compra.objects.select_related('proveedor'), 
         id_compra=id_compra
     )
-    detalles = DetalleCompra.objects.select_related(
-        'inventario__producto'
-    ).filter(compra=compra)
+    detalles = DetalleCompra.objects.select_related('inventario__producto').filter(compra=compra)
     
-    # Crear PDF
+    buffer = io.BytesIO()
     pdf = PDFCompra()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Información del proveedor
+    # Proveedor
     proveedor = compra.proveedor
     pdf.section_title('Información del Proveedor')
     pdf.info_row('Nombre', proveedor.nomProv)
-    pdf.info_row('Dirección', proveedor.direccion)
-    pdf.info_row('Teléfono', proveedor.telefono)
+    pdf.info_row('Direccion', proveedor.direccion)
+    pdf.info_row('Telefono', proveedor.telefono)
     pdf.info_row('Email', proveedor.email)
     pdf.ln(3)
     
-    # Información de la compra
+    # Compra
     pdf.section_title('Información de la Compra')
-    pdf.info_row('Número de Compra', f"#{compra.id_compra}")
+    pdf.info_row('Numero de Compra', f"#{compra.id_compra}")
     pdf.info_row('Fecha', compra.fecha.strftime("%d/%m/%Y %H:%M"))
     pdf.info_row('Estado', 'Activa' if compra.estado else 'Inactiva')
     pdf.ln(5)
     
-    # Tabla de detalles
-    pdf.set_font('Arial', 'B', 9)
+    # Tabla
+    pdf.set_font('Helvetica', 'B', 9)
     pdf.set_fill_color(37, 99, 235)
     pdf.set_text_color(255, 255, 255)
-    
-    pdf.cell(25, 8, 'Código', 1, 0, 'C', 1)
+    pdf.cell(25, 8, 'Codigo', 1, 0, 'C', 1)
     pdf.cell(70, 8, 'Producto', 1, 0, 'L', 1)
     pdf.cell(20, 8, 'Cant.', 1, 0, 'C', 1)
-    pdf.cell(30, 8, 'Precio Unit.', 1, 0, 'R', 1)
+    pdf.cell(30, 8, 'P. Unit.', 1, 0, 'R', 1)
     pdf.cell(30, 8, 'Subtotal', 1, 1, 'R', 1)
-    
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font('Arial', '', 9)
+    pdf.set_font('Helvetica', '', 9)
     
     for detalle in detalles:
         producto = detalle.inventario.producto
@@ -442,45 +424,42 @@ def generar_pdf_compra(request, id_compra):
         pdf.cell(25, 7, producto.codProducto or '', 1, 0, 'C')
         pdf.cell(70, 7, producto.nomProducto[:35], 1, 0, 'L')
         pdf.cell(20, 7, str(detalle.cantidad), 1, 0, 'C')
-        pdf.cell(30, 7, f"Bs {producto.precioCompra:.2f}", 1, 0, 'R')
-        pdf.cell(30, 7, f"Bs {subtotal:.2f}", 1, 1, 'R')
+        pdf.cell(30, 7, f"Bs {float(producto.precioCompra):.2f}", 1, 0, 'R')
+        pdf.cell(30, 7, f"Bs {float(subtotal):.2f}", 1, 1, 'R')
     
-    # Total
     pdf.ln(5)
-    pdf.set_font('Arial', 'B', 12)
+    pdf.set_font('Helvetica', 'B', 12)
     pdf.cell(145, 10, 'TOTAL:', 0, 0, 'R')
     pdf.set_text_color(37, 99, 235)
-    pdf.cell(40, 10, f"Bs {compra.total:.2f}", 0, 1, 'R')
+    pdf.cell(40, 10, f"Bs {float(compra.total):.2f}", 0, 1, 'R')
     pdf.set_text_color(0, 0, 0)
     
-    # Firmas
     pdf.ln(20)
-    pdf.set_font('Arial', '', 9)
+    pdf.set_font('Helvetica', '', 9)
     pdf.cell(90, 10, '_________________________', 0, 0, 'C')
     pdf.cell(90, 10, '_________________________', 0, 1, 'C')
     pdf.cell(90, 5, 'Firma del Proveedor', 0, 0, 'C')
     pdf.cell(90, 5, 'Resp. de Compras', 0, 1, 'C')
     
-    # Generar respuesta
-    response = HttpResponse(content_type='application/pdf')
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="compra_{id_compra}.pdf"'
-    
-    pdf_output = pdf.output(dest='S').encode('latin-1', errors='ignore')
-    response.write(pdf_output)
-    
     return response
 
 
-# Las funciones de imprimir (HTML) se mantienen igual
+# =============================================================================
+# VISTAS DE IMPRESIÓN HTML
+# =============================================================================
+
 def imprimir_venta(request, id_venta):
     """Vista para imprimir venta en formato HTML"""
     venta = get_object_or_404(
         Venta.objects.select_related('cliente', 'metodo_pago'), 
         id_venta=id_venta
     )
-    detalles = DetalleVenta.objects.select_related(
-        'inventario__producto'
-    ).filter(venta=venta)
+    detalles = DetalleVenta.objects.select_related('inventario__producto').filter(venta=venta)
     
     context = {
         'venta': venta,
@@ -488,7 +467,6 @@ def imprimir_venta(request, id_venta):
         'cliente': venta.cliente,
         'fecha_impresion': timezone.now()
     }
-    
     html_string = render_to_string('reportes/venta_print.html', context)
     return HttpResponse(html_string)
 
@@ -499,9 +477,7 @@ def imprimir_compra(request, id_compra):
         Compra.objects.select_related('proveedor'), 
         id_compra=id_compra
     )
-    detalles = DetalleCompra.objects.select_related(
-        'inventario__producto'
-    ).filter(compra=compra)
+    detalles = DetalleCompra.objects.select_related('inventario__producto').filter(compra=compra)
     
     context = {
         'compra': compra,
@@ -509,6 +485,226 @@ def imprimir_compra(request, id_compra):
         'proveedor': compra.proveedor,
         'fecha_impresion': timezone.now()
     }
-    
     html_string = render_to_string('reportes/compra_print.html', context)
     return HttpResponse(html_string)
+
+
+# =============================================================================
+# EXPORTACIÓN DE REPORTES GENERALES (PDF)
+# =============================================================================
+
+def exportar_ventas_pdf(request):
+    """Generar PDF con reporte general de ventas filtradas"""
+    ventas = filtrar_ventas(request)
+    
+    productos_data = []
+    total_ventas = 0
+    total_ganancia = 0
+    
+    for venta in ventas:
+        for detalle in venta.detalles.select_related('inventario__producto'):
+            producto = detalle.inventario.producto
+            precio_venta = float(producto.precioVenta) if producto.precioVenta else 0
+            precio_compra = float(producto.precioCompra) if producto.precioCompra else 0
+            cantidad = int(detalle.cantidad) if detalle.cantidad else 0
+            subtotal = float(detalle.subtotal) if detalle.subtotal else 0
+            ganancia = (precio_venta - precio_compra) * cantidad
+            
+            productos_data.append({
+                'cod': producto.codProducto or '',
+                'nom': producto.nomProducto,
+                'cantidad': cantidad,
+                'precio_unit': precio_venta,
+                'subtotal': subtotal,
+                'ganancia': ganancia,
+            })
+            total_ventas += subtotal
+            total_ganancia += ganancia
+    
+    filtros = {
+        'Fecha': request.GET.get('fecha_reporte', 'Todos'),
+        'Producto': request.GET.get('producto', 'Todos'),
+        'Categoria': request.GET.get('categoria', 'Todas'),
+    }
+    
+    buffer = io.BytesIO()
+    pdf = PDFReporteGeneral()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, 'REPORTE DE VENTAS', 0, 1, 'C')
+    pdf.ln(5)
+    pdf.filters_box(filtros)
+    
+    pdf.section_title('Resumen')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(40, 6, 'Total Ventas:', 0, 0)
+    pdf.cell(0, 6, f"{ventas.count()} registros", 0, 1)
+    pdf.cell(40, 6, 'Productos unicos:', 0, 0)
+    num_unicos = len(set(p['nom'] for p in productos_data))
+    pdf.cell(0, 6, f"{num_unicos}", 0, 1)
+    pdf.ln(3)
+    
+    if productos_data:
+        pdf.section_title('Detalle de Productos')
+        pdf.products_table_header(include_profit=True)
+        for prod in productos_data:
+            pdf.product_row(
+                producto={'cod': prod['cod'], 'nom': prod['nom']},
+                cantidad=prod['cantidad'],
+                precio_unit=prod['precio_unit'],
+                subtotal=prod['subtotal'],
+                ganancia=prod['ganancia']
+            )
+    else:
+        pdf.set_font('Helvetica', 'I', 10)
+        pdf.cell(0, 10, 'No hay datos para mostrar', 0, 1, 'C')
+    
+    pdf.ln(5)
+    pdf.set_font('Helvetica', 'B', 11)
+    pdf.totals_row('TOTAL VENDIDO:', total_ventas)
+    pdf.totals_row('GANANCIA TOTAL:', total_ganancia, is_grand_total=True)
+    
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_ventas.pdf"'
+    return response
+
+
+def exportar_compras_pdf(request):
+    """Generar PDF con reporte general de compras filtradas + proveedores"""
+    compras = filtrar_compras(request)
+    
+    productos_data = []
+    total_compras = 0
+    proveedores_usados = set()
+    
+    for compra in compras:
+        proveedor = compra.proveedor
+        proveedores_usados.add(proveedor.nomProv)
+        
+        for detalle in compra.detalles.select_related('inventario__producto'):
+            producto = detalle.inventario.producto
+            precio_compra = float(producto.precioCompra) if producto.precioCompra else 0
+            cantidad = int(detalle.cantidad) if detalle.cantidad else 0
+            subtotal = cantidad * precio_compra
+            
+            productos_data.append({
+                'cod': producto.codProducto or '',
+                'nom': producto.nomProducto,
+                'cantidad': cantidad,
+                'precio_unit': precio_compra,
+                'subtotal': subtotal,
+                'proveedor': proveedor.nomProv,
+                'compra_id': compra.id_compra,
+                'fecha': compra.fecha
+            })
+            total_compras += subtotal
+    
+    filtros = {
+        'Fecha': request.GET.get('fecha_reporte', 'Todos'),
+        'Producto': request.GET.get('producto', 'Todos'),
+        'Categoria': request.GET.get('categoria', 'Todas'),
+        'Proveedor': request.GET.get('proveedor', 'Todos'),
+    }
+    
+    buffer = io.BytesIO()
+    pdf = PDFReporteGeneral()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, 'REPORTE DE COMPRAS', 0, 1, 'C')
+    pdf.ln(5)
+    pdf.filters_box(filtros)
+    
+    pdf.section_title('Resumen')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(40, 6, 'Total Compras:', 0, 0)
+    pdf.cell(0, 6, f"{compras.count()} registros", 0, 1)
+    pdf.cell(40, 6, 'Proveedores:', 0, 0)
+    pdf.cell(0, 6, f"{len(proveedores_usados)} unicos", 0, 1)
+    pdf.ln(3)
+    
+    if productos_data:
+        pdf.section_title('Detalle de Productos')
+        pdf.products_table_header(include_profit=False)
+        for prod in productos_data:
+            pdf.product_row(
+                producto={'cod': prod['cod'], 'nom': prod['nom']},
+                cantidad=prod['cantidad'],
+                precio_unit=prod['precio_unit'],
+                subtotal=prod['subtotal'],
+                ganancia=None
+            )
+    
+    pdf.ln(5)
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.set_text_color(37, 99, 235)
+    pdf.cell(130, 10, 'TOTAL COMPRADO:', 0, 0, 'R')
+    pdf.cell(50, 10, f"Bs {total_compras:.2f}", 0, 1, 'R')
+    pdf.set_text_color(0, 0, 0)
+    
+    if proveedores_usados:
+        pdf.ln(10)
+        pdf.section_title('Proveedores Involucrados')
+        pdf.set_font('Helvetica', '', 10)
+        proveedores_detalle = Proveedor.objects.filter(
+            nomProv__in=proveedores_usados
+        ).values('nomProv', 'direccion', 'telefono', 'email')
+        
+        for prov in proveedores_detalle:
+            pdf.set_font('Helvetica', 'B', 10)
+            pdf.cell(0, 6, prov['nomProv'], 0, 1)
+            pdf.set_font('Helvetica', '', 9)
+            pdf.cell(5, 5, '', 0, 0)
+            direccion = prov['direccion'] or ''
+            telefono = prov['telefono'] or ''
+            email = prov['email'] or ''
+            pdf.multi_cell(0, 5, f"Direccion: {direccion}\nTelefono: {telefono}\nEmail: {email}")
+            pdf.ln(2)
+    
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_compras.pdf"'
+    return response
+
+
+# =============================================================================
+# FUNCIÓN DE PRUEBA (DEBUG)
+# =============================================================================
+
+def test_pdf(request):
+    """PDF de prueba simple para verificar que FPDF2 funciona"""
+    buffer = io.BytesIO()
+    pdf = PDFReporteGeneral()
+    pdf.add_page()
+    
+    pdf.set_font('Helvetica', 'B', 20)
+    pdf.cell(0, 10, 'PDF DE PRUEBA', 0, 1, 'C')
+    pdf.ln(10)
+    
+    pdf.set_font('Helvetica', '', 12)
+    pdf.cell(0, 10, 'Si ves esto, FPDF2 funciona correctamente', 0, 1, 'C')
+    pdf.ln(5)
+    pdf.cell(0, 10, 'El problema eran los datos, no el generador de PDF', 0, 1, 'C')
+    
+    pdf.ln(10)
+    pdf.products_table_header(include_profit=True)
+    pdf.product_row({'cod': 'TEST001', 'nom': 'Producto de Prueba'}, 10, 15.00, 150.00, 50.00)
+    pdf.product_row({'cod': 'TEST002', 'nom': 'Otro Producto'}, 5, 20.00, 100.00, 30.00)
+    
+    pdf.ln(5)
+    pdf.totals_row('TOTAL:', 250.00)
+    
+    pdf.output(buffer)
+    buffer.seek(0)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="test_fpdf2.pdf"'
+    return response

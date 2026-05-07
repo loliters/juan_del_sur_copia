@@ -142,12 +142,12 @@
         
         <a href="{% url 'proveedores:lista' %}"></i> Proveedores</a>
         
-        <a href="{% url 'compras:ver_compras' %}" class="active">
-             Compras
-        </a>
+        <a href="{% url 'compras:ver_compras' %}">Compras</a>
         
-        <a href="#"> Reportes</a>
+        <a href="{% url 'reportes:compras_report' %}">Reportes</a>
 
+        <hr>
+        
         <a "{% url 'compras:compras_desactivadas' %}">
             Ver inactivos
         </a>
@@ -171,51 +171,9 @@
                 </a>
             </div>
 
-            <!-- 🔍 PANEL DE DEBUG (Solo en desarrollo) -->
-            {% if debug_info and settings.DEBUG %}
-            <div class="alert alert-warning border-dashed" style="border: 2px dashed #dc3545;">
-                <h5 class="mb-2">🔍 DEBUG INFO (Solo desarrollo)</h5>
-                
-                <details open>
-                    <summary class="fw-bold">📦 POST Data completo</summary>
-                    <pre class="bg-dark text-light p-2 rounded small" style="max-height: 200px; overflow-y: auto;">
-{{ debug_info.post_data|pprint }}
-                    </pre>
-                </details>
-                
-                <details class="mt-2">
-                    <summary class="fw-bold">🎯 proveedor_id RAW</summary>
-                    <code class="bg-secondary text-white px-2 py-1 rounded">
-                        {{ debug_info.proveedor_id_raw }}
-                    </code>
-                </details>
-                
-                <details class="mt-2">
-                    <summary class="fw-bold">🛒 Productos enviados ({{ debug_info.productos_raw|length }})</summary>
-                    <pre class="bg-dark text-light p-2 rounded small" style="max-height: 150px; overflow-y: auto;">
-{{ debug_info.productos_raw|pprint }}
-                    </pre>
-                </details>
-                
-                <small class="text-muted d-block mt-2">
-                    💡 Si <code>proveedor_id_raw</code> dice <code>''</code> o <code>None</code>, 
-                    el <code>&lt;select&gt;</code> no está enviando el valor.
-                </small>
-            </div>
-            {% endif %}
-            <!-- 🔚 FIN DEBUG PANEL -->
+            
 
-            <!-- ✅ Mensajes de Django (Éxito/Error) -->
-            {% if messages %}
-            <div class="messages mb-3">
-                {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+           
 
             <!-- 📋 Listado de Compras -->
             {% for compra_data in compras %}

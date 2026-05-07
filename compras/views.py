@@ -163,7 +163,7 @@ def crear_compra(request):
                 del request.session['carrito_compra']
             
             messages.success(request, f'✅ Compra #{compra.id_compra} registrada - Stock reabastecido correctamente')
-            return redirect('compras:ver_compras')
+            return redirect('compras:detalle_compra')
             
         except Proveedor.DoesNotExist:
             messages.error(request, 'Proveedor no encontrado')
@@ -541,3 +541,26 @@ def recuperar_compra(request, id):
         messages.error(request, f' Error al recuperar compra: {str(e)}')
         return redirect('compras:compras_desactivadas')
 
+
+
+# ======================
+# PARA DETALLE DE COMPRA
+# ======================
+
+
+from django.shortcuts import render, get_object_or_404
+from compras.models import Compra, DetalleCompra
+from django.utils import timezone
+
+def detalle_compra(request, id_compra):
+    compra = get_object_or_404(Compra, id_compra=id_compra)
+    detalles = DetalleCompra.objects.filter(compra=compra).select_related(
+        'inventario__producto'
+    )
+    
+    context = {
+        'compra': compra,
+        'detalles': detalles,
+        'fecha_actual': timezone.now().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'compras/detalle_compra.html', context)

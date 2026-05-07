@@ -14,6 +14,9 @@ urlpatterns = [
     path('registro-venta/', views.registro_venta, name='registro_venta'),
     path('seleccionar-cliente/', views.seleccionar_cliente, name='seleccionar_cliente'),
     
+    #Detalle Venta luego de confirmar compra
+    path('<int:id_venta>/detalle/', views.detalle_venta, name='detalle_venta'),
+
     # AJAX endpoints para carrito (ESTAS 3 SON LAS IMPORTANTES)
     path('agregar-al-carrito/', views.agregar_al_carrito_ajax, name='agregar_al_carrito'),
     path('actualizar-cantidad/', views.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),

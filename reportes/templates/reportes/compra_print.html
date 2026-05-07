@@ -20,64 +20,138 @@
         .signatures { margin-top: 40px; display: flex; justify-content: space-around; }
         .signature { text-align: center; width: 200px; border-top: 1px solid #333; padding-top: 10px; margin-top: 50px; }
         @media print { body { margin: 1cm; } }
+
+        /* ========== CONFIGURACIÓN DE IMPRESIÓN ========== */
+@media print {
+    /* Ocultar elementos no deseados */
+    body * {
+        visibility: hidden;
+    }
+    
+    /* Mostrar solo el área de impresión */
+    .print-area, .print-area * {
+        visibility: visible;
+    }
+    
+    .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+    }
+    
+    /* Forzar salto de página si es necesario */
+    .page-break {
+        page-break-before: always;
+    }
+    
+    /* Ajustes de tabla para impresión */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10pt;
+    }
+    
+    th, td {
+        border: 1px solid #000;
+        padding: 6px;
+        text-align: left;
+    }
+    
+    /* Evitar que se corten filas */
+    tr {
+        page-break-inside: avoid;
+    }
+    
+    /* Configurar márgenes de página */
+    @page {
+        size: letter;
+        margin: 1.5cm;
+    }
+}
+
+/* Para pantalla: envolver todo en .print-area */
+.print-area {
+    padding: 20px;
+    background: white;
+}
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="company">TU EMPRESA</div>
-        <div>NIT: 1234567890</div>
-        <div class="title">ORDEN DE COMPRA</div>
+    <div class="print-area">
+        <div class="header">
+            <div class="company">TU EMPRESA</div>
+            <div>NIT: 1234567890</div>
+            <div class="title">ORDEN DE COMPRA</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Información del Proveedor</div>
+            <div class="info"><span class="info-label">Nombre:</span> {{ proveedor.nomProv }}</div>
+            <div class="info"><span class="info-label">Dirección:</span> {{ proveedor.direccion }}</div>
+            <div class="info"><span class="info-label">Teléfono:</span> {{ proveedor.telefono }}</div>
+            <div class="info"><span class="info-label">Email:</span> {{ proveedor.email }}</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Información de la Compra</div>
+            <div class="info"><span class="info-label">Número:</span> #{{ compra.id_compra }}</div>
+            <div class="info"><span class="info-label">Fecha:</span> {{ compra.fecha|date:"d/m/Y H:i" }}</div>
+            <div class="info"><span class="info-label">Estado:</span> {% if compra.estado %}Activa{% else %}Inactiva{% endif %}</div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Cant.</th>
+                    <th style="text-align: right;">Precio Unit.</th>
+                    <th style="text-align: right;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for detalle in detalles %}
+                <tr>
+                    <td>{{ detalle.inventario.producto.codProducto }}</td>
+                    <td>{{ detalle.inventario.producto.nomProducto }}</td>
+                    <td style="text-align: center;">{{ detalle.cantidad }}</td>
+                    <td style="text-align: right;">Bs {{ detalle.inventario.producto.precioCompra|floatformat:2 }}</td>
+                    <td style="text-align: right;">Bs {{ detalle.subtotal|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="total">
+            TOTAL: <span class="total-value">Bs {{ compra.total|floatformat:2 }}</span>
+        </div>
+
+        <div class="signatures">
+            <div class="signature">Firma del Proveedor</div>
+            <div class="signature">Resp. de Compras</div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; font-size: 9pt; color: #666;">
+            Impreso: {{ fecha_impresion|date:"d/m/Y H:i:s" }}
+        </div>
     </div>
+
+    <script>
+    // Auto-trigger print dialog when page loads
+    window.addEventListener('load', function() {
+        // Pequeño delay para asegurar que el contenido esté renderizado
+        setTimeout(function() {
+            window.print();
+        }, 500);
+    });
     
-    <div class="section">
-        <div class="section-title">Información del Proveedor</div>
-        <div class="info"><span class="info-label">Nombre:</span> {{ proveedor.nomProv }}</div>
-        <div class="info"><span class="info-label">Dirección:</span> {{ proveedor.direccion }}</div>
-        <div class="info"><span class="info-label">Teléfono:</span> {{ proveedor.telefono }}</div>
-        <div class="info"><span class="info-label">Email:</span> {{ proveedor.email }}</div>
-    </div>
-    
-    <div class="section">
-        <div class="section-title">Información de la Compra</div>
-        <div class="info"><span class="info-label">Número:</span> #{{ compra.id_compra }}</div>
-        <div class="info"><span class="info-label">Fecha:</span> {{ compra.fecha|date:"d/m/Y H:i" }}</div>
-        <div class="info"><span class="info-label">Estado:</span> {% if compra.estado %}Activa{% else %}Inactiva{% endif %}</div>
-    </div>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Código</th>
-                <th>Producto</th>
-                <th>Cant.</th>
-                <th style="text-align: right;">Precio Unit.</th>
-                <th style="text-align: right;">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for detalle in detalles %}
-            <tr>
-                <td>{{ detalle.inventario.producto.codProducto }}</td>
-                <td>{{ detalle.inventario.producto.nomProducto }}</td>
-                <td style="text-align: center;">{{ detalle.cantidad }}</td>
-                <td style="text-align: right;">Bs {{ detalle.inventario.producto.precioCompra|floatformat:2 }}</td>
-                <td style="text-align: right;">Bs {{ detalle.cantidad|multiply:detalle.inventario.producto.precioCompra|floatformat:2 }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    
-    <div class="total">
-        TOTAL: <span class="total-value">Bs {{ compra.total|floatformat:2 }}</span>
-    </div>
-    
-    <div class="signatures">
-        <div class="signature">Firma del Proveedor</div>
-        <div class="signature">Resp. de Compras</div>
-    </div>
-    
-    <div style="text-align: center; margin-top: 30px; font-size: 9pt; color: #666;">
-        Impreso: {{ fecha_impresion|date:"d/m/Y H:i:s" }}
-    </div>
+    // Opcional: Redirigir después de imprimir/cancelar (descomentar si se desea)
+     window.onafterprint = function() {
+          window.close(); // Cierra la pestaña después de imprimir
+     };
+    </script>
 </body>
 </html>
