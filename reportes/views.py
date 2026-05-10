@@ -497,6 +497,7 @@ def exportar_ventas_pdf(request):
     """Generar PDF con reporte general de ventas filtradas"""
     ventas = filtrar_ventas(request)
     
+    # ===== PROCESAR DATOS PARA EL PDF =====
     productos_data = []
     total_ventas = 0
     total_ganancia = 0
@@ -504,10 +505,10 @@ def exportar_ventas_pdf(request):
     for venta in ventas:
         for detalle in venta.detalles.select_related('inventario__producto'):
             producto = detalle.inventario.producto
-            precio_venta = float(producto.precioVenta) if producto.precioVenta else 0
-            precio_compra = float(producto.precioCompra) if producto.precioCompra else 0
+            precio_venta = float(producto.precioVenta) if producto.precioVenta is not None else 0.0
+            precio_compra = float(producto.precioCompra) if producto.precioCompra is not None else 0.0
             cantidad = int(detalle.cantidad) if detalle.cantidad else 0
-            subtotal = float(detalle.subtotal) if detalle.subtotal else 0
+            subtotal = float(detalle.subtotal) if detalle.subtotal else 0.0
             ganancia = (precio_venta - precio_compra) * cantidad
             
             productos_data.append({
@@ -521,12 +522,49 @@ def exportar_ventas_pdf(request):
             total_ventas += subtotal
             total_ganancia += ganancia
     
+    # ===== RECONSTRUIR FILTROS PARA EL PDF =====
+    filtro_fecha = request.GET.get('filtro_fecha', '')
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+    
+    from_date, to_date = get_date_range(filtro_fecha, fecha_desde, fecha_hasta)
+    if from_date and to_date:
+        texto_fecha = f"{from_date.strftime('%d/%m/%Y')} - {to_date.strftime('%d/%m/%Y')}"
+    elif filtro_fecha:
+        nombres_filtro = {
+            'ultimo_dia': 'Último día',
+            'ultima_semana': 'Última semana',
+            'este_mes': 'Este mes',
+            'este_año': 'Este año',
+        }
+        texto_fecha = nombres_filtro.get(filtro_fecha, 'Todos')
+    else:
+        texto_fecha = 'Todos'
+    
+    producto_id = request.GET.get('producto', '')
+    categoria_id = request.GET.get('categoria', '')
+    
+    texto_producto = 'Todos'
+    if producto_id == 'mas_vendido':
+        texto_producto = 'Más vendido'
+    elif producto_id:
+        prod = Producto.objects.filter(pk=producto_id).first()
+        if prod:
+            texto_producto = prod.nomProducto
+    
+    texto_categoria = 'Todas'
+    if categoria_id:
+        cat = Categoria.objects.filter(pk=categoria_id).first()
+        if cat:
+            texto_categoria = cat.nomCategoria
+    
     filtros = {
-        'Fecha': request.GET.get('fecha_reporte', 'Todos'),
-        'Producto': request.GET.get('producto', 'Todos'),
-        'Categoria': request.GET.get('categoria', 'Todas'),
+        'Fecha': texto_fecha,
+        'Producto': texto_producto,
+        'Categoria': texto_categoria,
     }
     
+    # ===== GENERAR PDF =====
     buffer = io.BytesIO()
     pdf = PDFReporteGeneral()
     pdf.add_page()
@@ -541,7 +579,7 @@ def exportar_ventas_pdf(request):
     pdf.set_font('Helvetica', '', 10)
     pdf.cell(40, 6, 'Total Ventas:', 0, 0)
     pdf.cell(0, 6, f"{ventas.count()} registros", 0, 1)
-    pdf.cell(40, 6, 'Productos unicos:', 0, 0)
+    pdf.cell(40, 6, 'Productos únicos:', 0, 0)
     num_unicos = len(set(p['nom'] for p in productos_data))
     pdf.cell(0, 6, f"{num_unicos}", 0, 1)
     pdf.ln(3)
@@ -572,7 +610,6 @@ def exportar_ventas_pdf(request):
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="reporte_ventas.pdf"'
     return response
-
 
 def exportar_compras_pdf(request):
     """Generar PDF con reporte general de compras filtradas + proveedores"""
@@ -638,19 +675,19 @@ def exportar_compras_pdf(request):
     if producto_id == 'mas_comprado':
         texto_producto = 'Más comprado'
     elif producto_id:
-        prod = Producto.objects.filter(id_producto=producto_id).first()
+        prod = Producto.objects.filter(pk=producto_id).first()
         if prod:
             texto_producto = prod.nomProducto
 
     texto_categoria = 'Todas'
     if categoria_id:
-        cat = Categoria.objects.filter(id_categoria=categoria_id).first()
+        cat = Categoria.objects.filter(pk=categoria_id).first()
         if cat:
             texto_categoria = cat.nomCategoria
 
     texto_proveedor = 'Todos'
     if proveedor_id:
-        prov = Proveedor.objects.filter(id_proveedor=proveedor_id).first()
+        prov = Proveedor.objects.filter(pk=proveedor_id).first()
         if prov:
             texto_proveedor = prov.nomProv
 

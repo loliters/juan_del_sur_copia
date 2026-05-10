@@ -700,25 +700,42 @@
         }
 
         // Función para exportar reporte con filtros actuales
-        function exportarReporte(tipo) {
-            const form = document.getElementById('filterForm');
-            const params = new URLSearchParams(new FormData(form));
-            
-            const from = document.getElementById('fechaDesde').value;
-            const to = document.getElementById('fechaHasta').value;
-            const filtroBtn = document.querySelector('.date-filter-btn.active');
-            
-            if (from && to) {
-                params.set('fecha_reporte', `${from} - ${to}`);
-            } else if (filtroBtn) {
-                const label = filtroBtn.textContent.trim();
-                params.set('fecha_reporte', label);
-            } else {
-                params.set('fecha_reporte', 'Todos los registros');
-            }
-            
-            window.location.href = `/reportes/${tipo}/exportar/?${params.toString()}`;
+        // Función para exportar reporte con filtros actuales (CORREGIDA)
+function exportarReporte(tipo) {
+        const form = document.getElementById('filterForm');
+        if (!form) return;
+        
+        // Obtener valores de fecha
+        const fechaDesde = document.getElementById('fechaDesde')?.value || '';
+        const fechaHasta = document.getElementById('fechaHasta')?.value || '';
+        const filtroBtn = document.querySelector('.date-filter-btn.active');
+        const filtroFecha = filtroBtn?.dataset.filter || '';
+        
+        // Construir parámetros desde cero
+        const params = new URLSearchParams();
+        
+        // === LÓGICA DE FECHAS (Prioridad: custom > preestablecido) ===
+        if (fechaDesde && fechaHasta) {
+            params.set('fecha_desde', fechaDesde);
+            params.set('fecha_hasta', fechaHasta);
+            // No establecer filtro_fecha para evitar conflicto
+        } else if (filtroFecha) {
+            params.set('filtro_fecha', filtroFecha);
         }
+        // Si no hay nada, no se envía parámetro de fecha = "Todos"
+        
+        // === RESTO DE FILTROS ===
+        const producto = form.querySelector('[name="producto"]')?.value;
+        const categoria = form.querySelector('[name="categoria"]')?.value;
+        
+        if (producto) params.set('producto', producto);
+        if (categoria) params.set('categoria', categoria);
+        
+        // Redirigir a la vista de exportación
+        window.location.href = `/reportes/${tipo}/exportar/?${params.toString()}`;
+    }
+            
+
     </script>
 </body>
 </html>

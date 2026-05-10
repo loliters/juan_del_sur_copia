@@ -54,7 +54,7 @@ def registrar(request):
             messages.error(request, 'El nombre es obligatorio')
             return redirect('productos:registrar')
         
-        # 1️⃣ Crear Producto (sin stockActual)
+        # 1️⃣ Crear Producto 
         producto = Producto.objects.create(
             codProducto=codProducto,
             nomProducto=nomProducto,
