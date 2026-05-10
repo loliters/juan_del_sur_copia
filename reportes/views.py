@@ -604,12 +604,63 @@ def exportar_compras_pdf(request):
             })
             total_compras += subtotal
     
+    
+    #++++
+    # filtros
+    #++++
+    # Reconstruir los filtros con los mismos nombres que usa filtrar_compras()
+    filtro_fecha = request.GET.get('filtro_fecha', '')
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+
+    # Obtener el texto legible para el rango de fechas (igual que en compras_report)
+    from_date, to_date = get_date_range(filtro_fecha, fecha_desde, fecha_hasta)
+    if from_date and to_date:
+        texto_fecha = f"{from_date.strftime('%d/%m/%Y')} - {to_date.strftime('%d/%m/%Y')}"
+    elif filtro_fecha:
+        # Mapeo de nombres preestablecidos
+        nombres_filtro = {
+            'ultimo_dia': 'Último día',
+            'ultima_semana': 'Última semana',
+            'este_mes': 'Este mes',
+            'este_año': 'Este año',
+        }
+        texto_fecha = nombres_filtro.get(filtro_fecha, 'Todos')
+    else:
+        texto_fecha = 'Todos'
+
+    # Mapeo de nombres para productos y categorías (opcional, para mostrar nombres en vez de IDs)
+    producto_id = request.GET.get('producto', '')
+    categoria_id = request.GET.get('categoria', '')
+    proveedor_id = request.GET.get('proveedor', '')
+
+    texto_producto = 'Todos'
+    if producto_id == 'mas_comprado':
+        texto_producto = 'Más comprado'
+    elif producto_id:
+        prod = Producto.objects.filter(id_producto=producto_id).first()
+        if prod:
+            texto_producto = prod.nomProducto
+
+    texto_categoria = 'Todas'
+    if categoria_id:
+        cat = Categoria.objects.filter(id_categoria=categoria_id).first()
+        if cat:
+            texto_categoria = cat.nomCategoria
+
+    texto_proveedor = 'Todos'
+    if proveedor_id:
+        prov = Proveedor.objects.filter(id_proveedor=proveedor_id).first()
+        if prov:
+            texto_proveedor = prov.nomProv
+
     filtros = {
-        'Fecha': request.GET.get('fecha_reporte', 'Todos'),
-        'Producto': request.GET.get('producto', 'Todos'),
-        'Categoria': request.GET.get('categoria', 'Todas'),
-        'Proveedor': request.GET.get('proveedor', 'Todos'),
+        'Fecha': texto_fecha,
+        'Producto': texto_producto,
+        'Categoria': texto_categoria,
+        'Proveedor': texto_proveedor,
     }
+
     
     buffer = io.BytesIO()
     pdf = PDFReporteGeneral()

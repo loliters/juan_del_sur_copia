@@ -187,8 +187,9 @@
                         </div>
                         <div class="col-md-4 text-center">
                             <i class="fas fa-calendar"></i> 
-                            {{ compra.compra.fecha|date:"d/m/Y H:i" }}
+                            {{ compra_data.compra.fecha|date:"d/m/Y H:i" }}
                         </div>
+                        
                         <div class="col-md-4 text-end">
                             <i class="fas fa-truck"></i> 
                             {{ compra_data.compra.proveedor.nomProv }}

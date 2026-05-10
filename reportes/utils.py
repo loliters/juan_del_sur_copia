@@ -11,7 +11,7 @@ class PDFReporteGeneral(FPDF):
     
     def header(self):
         self.set_font('Helvetica', 'B', 14)
-        self.cell(0, 10, 'TU EMPRESA - REPORTE', 0, 1, 'C')
+        self.cell(0, 10, 'JUAN DEL SUR - REPORTE', 0, 1, 'C')
         self.set_font('Helvetica', '', 9)
         fecha = timezone.now().strftime("%d/%m/%Y %H:%M")
         self.cell(0, 5, f'Generado: {fecha}', 0, 1, 'C')

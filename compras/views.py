@@ -518,7 +518,7 @@ def buscar_productos_compra_ajax(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 # ========================
-# RECUPERAR COMPRA (Compatible con urls antiguas)
+# RECUPERAR COMPRA 
 # ========================
 
 def recuperar_compra(request, id):
@@ -535,7 +535,7 @@ def recuperar_compra(request, id):
             detalle.inventario.save()
         compra.estado = True
         compra.save()
-        messages.success(request, f'✅ Compra #{id} recuperada exitosamente')
+        messages.success(request, f'Compra #{id} recuperada exitosamente')
         return redirect('compras:compras_desactivadas')
     except Exception as e:
         messages.error(request, f' Error al recuperar compra: {str(e)}')
