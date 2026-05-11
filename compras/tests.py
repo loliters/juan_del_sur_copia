@@ -121,8 +121,7 @@ class ComprasTests(TestCase):
             'precioVenta': '15', 
             'stockActual': '20', 
             'tipoUnidad': 'unidad',
-            # ✅ next se usa para el redirect, pero va en GET, no en POST
-            # Si tu vista lo lee de GET, no lo envíes aquí
+            
         }, follow=True)
         
         # ✅ Verificar que el producto se creó (lógica principal)
