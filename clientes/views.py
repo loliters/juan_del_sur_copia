@@ -7,12 +7,10 @@ from metodopago.models import MetodoPago  # ← Agregar esta importación
 import re
 
 def registro_cliente(request):
-    # Verificar sesión
     if request.session.get('usuario_id') is None:
         return redirect('login')
-    
+
     if request.method == "POST":
-        # Obtener datos del formulario
         nombre = request.POST.get('nombre', '').strip()
         razonSocial = request.POST.get('razonSocial', '').strip()
         carnet = request.POST.get('carnet', '').strip()
@@ -21,102 +19,74 @@ def registro_cliente(request):
         zona = request.POST.get('zona', '').strip()
         calle = request.POST.get('calle', '').strip()
         numeroCasa = request.POST.get('numeroCasa', '').strip()
-        
-        # ===== VALIDACIONES =====
+
         errores = False
-        
-        # 1. Validar NOMBRE (solo letras y espacios, OBLIGATORIO)
+
+        # NOMBRE
         if not nombre:
-            messages.error(request, 'El nombre es obligatorio')
             errores = True
         elif not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', nombre):
-            messages.error(request, ' El nombre solo debe contener letras y espacios (sin números)')
             errores = True
-        
-        # 2. Validar RAZÓN SOCIAL (solo letras y espacios, OPCIONAL)
+
+        # RAZON SOCIAL
         if razonSocial and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', razonSocial):
-            messages.error(request, ' La razón social solo debe contener letras y espacios (sin números)')
             errores = True
-        
-        # 3. Validar CARNET (solo números, OPCIONAL)
-        # 3. Validar CARNET (solo números, OPCIONAL)
+
+        # CARNET
         if carnet and not re.match(r'^[0-9]+$', carnet):
-            messages.error(request, ' El carnet solo debe contener números')
             errores = True
         elif carnet and Cliente.objects.filter(carnet=carnet).exists():
-            messages.error(request, f' El carnet "{carnet}" ya está registrado por otro cliente')
             errores = True
-        
-        # 4. Validar EMAIL (formato válido, OBLIGATORIO)
+
+        # EMAIL
         if not email:
-            messages.error(request, 'El email es obligatorio')
             errores = True
         elif not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            messages.error(request, 'Ingrese un correo electrónico válido')
             errores = True
-        else:
-            # Verificar si el email ya existe
-            if Cliente.objects.filter(email=email).exists():
-                messages.error(request, f'El correo electrónico "{email}" ya está registrado por otro cliente')
-                errores = True
-        
-        # 5. Validar TELÉFONO (solo números, OBLIGATORIO)
+        elif Cliente.objects.filter(email=email).exists():
+            errores = True
+
+        # TELEFONO
         if not telefono:
-            messages.error(request, 'El teléfono es obligatorio')
             errores = True
         elif not re.match(r'^[0-9]+$', telefono):
-            messages.error(request, ' El teléfono solo debe contener números (sin letras ni guiones)')
             errores = True
-        else:
-            # Verificar si el teléfono ya existe
-            if Cliente.objects.filter(telefono=telefono).exists():
-                messages.error(request, f' El número de teléfono "{telefono}" ya está registrado por otro cliente')
-                errores = True
-        
-        # 6. Validar ZONA (solo letras, OPCIONAL)
+        elif Cliente.objects.filter(telefono=telefono).exists():
+            errores = True
+
+        # ZONA
         if zona and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', zona):
-            messages.error(request, ' La zona solo debe contener letras y espacios')
             errores = True
-        
-        # 7. Validar CALLE (letras y números, OPCIONAL)
+
+        # CALLE
         if calle and not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ0-9\s]+$', calle):
-            messages.error(request, ' La calle solo debe contener letras, números y espacios')
             errores = True
-        
-        # 8. Validar NÚMERO DE CASA (solo números, OPCIONAL)
+
+        # NUMERO CASA
         if numeroCasa and not re.match(r'^[0-9]+$', numeroCasa):
-            messages.error(request, ' El número de casa solo debe contener números')
             errores = True
-        
-        # Si hay errores, redirigir al formulario
+
+        #  PARTE CRÍTICA - VERIFICA LA INDENTACIÓN 
         if errores:
-            return redirect('clientes:registro_cliente')  # ← CORREGIDO con namespace
+            return render(request, 'clientes/registro_cliente.html')
         
-        # ===== CREAR CLIENTE =====
-        try:
-            # Obtener un método de pago por defecto
-            metodo_pago_default = MetodoPago.objects.first()
-            
-            cliente = Cliente.objects.create(
-                nombre=nombre,
-                razonSocial=razonSocial if razonSocial else '',
-                carnet=carnet if carnet else None,  # ← ESTA ES LA LÍNEA CLAVE
-                email=email,
-                telefono=telefono,
-                zona=zona if zona else '',
-                calle=calle if calle else '',
-                numeroCasa=numeroCasa if numeroCasa else '',
-                estado=True,
-            )
-            
-            messages.success(request, f'¡Cliente {nombre} registrado exitosamente!')
-            return redirect('clientes:lista_clientes')  # ← CORREGIDO con namespace
-            
-        except Exception as e:
-            messages.error(request, f' Error al registrar cliente: {str(e)}')
-            return redirect('clientes:registro_cliente')  # ← CORREGIDO con namespace
-    
+        # ✅ Este bloque SOLO se ejecuta si NO hay errores
+        Cliente.objects.create(
+            nombre=nombre,
+            razonSocial=razonSocial if razonSocial else '',
+            carnet=carnet if carnet else None,
+            email=email,
+            telefono=telefono,
+            zona=zona if zona else '',
+            calle=calle if calle else '',
+            numeroCasa=numeroCasa if numeroCasa else '',
+            estado=True,
+        )
+        
+        return redirect('clientes:lista_clientes')
+
     return render(request, 'clientes/registro_cliente.html')
+
 
 
 def ver_clientes(request):

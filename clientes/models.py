@@ -8,9 +8,9 @@ class Cliente(models.Model):
     id_cliente = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100)
     razonSocial = models.CharField(max_length=150, blank=True, null=True)
-    carnet = models.CharField(max_length=20, blank=True, null=True)  # ← AGREGAR
-    email = models.EmailField()
-    telefono = models.CharField(max_length=20)
+    carnet = models.CharField(max_length=20, blank=True, null=True, unique=True)  # ← AGREGAR
+    email = models.EmailField(unique=True)
+    telefono = models.CharField(max_length=20, unique=True)
     zona = models.CharField(max_length=100)
     calle = models.CharField(max_length=100)
     numeroCasa = models.CharField(max_length=20)

@@ -111,3 +111,5 @@ class ProductosTests(TestCase):
         self.assertEqual(self.prod1.estado, 'activo')
         resp_list = self.client.get('/productos/inventario/')
         self.assertContains(resp_list, "Arroz")
+
+#pruebas de stock, hasta mientras aca, porque aun no estamos usando inventario

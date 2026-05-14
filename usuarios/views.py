@@ -224,7 +224,7 @@ def generar_email_preview(request):
         
         email_generado = f"{base}@{dominio}"
         email_final = email_generado
-        contador = 1
+        contador = 0
         while Usuario.objects.filter(email=email_final).exists():
             contador += 1
             email_final = f"{base}{contador}@{dominio}"
