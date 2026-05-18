@@ -38,7 +38,9 @@ def crear_categoria(request):
         return redirect('categorias:lista')
     
     if request.method == 'POST':
-        nombre = request.POST.get('nomCategoria').strip()
+        nombre = request.POST.get('nomCategoria')
+        if nombre:
+            nombre = nombre.strip()
 
         if not nombre:
             messages.error(request, 'El nombre es obligatorio')
@@ -76,7 +78,9 @@ def editar_categoria(request, id_categoria):
     categoria = get_object_or_404(Categoria, id=id_categoria)
 
     if request.method == 'POST':
-        nombre = request.POST.get('nomCategoria').strip()
+        nombre = request.POST.get('nomCategoria')
+        if nombre:
+                nombre = nombre.strip()
 
         if not nombre:
             messages.error(request, 'El nombre es obligatorio')

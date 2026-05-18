@@ -34,8 +34,13 @@ def crear_proveedor(request):
         return redirect('proveedores:lista')
     
     if request.method == 'POST':
-        nombre = request.POST.get('nomProv').strip()
-        direccion = request.POST.get('direccion').strip()
+        nombre = request.POST.get('nomProv')
+        direccion = request.POST.get('direccion')
+        if nombre:
+            nombre = nombre.strip()
+        if direccion:
+            direccion = direccion.strip()
+        
         email = request.POST.get('email')
         telefono = request.POST.get('telefono')
 
@@ -80,7 +85,9 @@ def editar_proveedor(request, id_proveedor):
     proveedor = get_object_or_404(Proveedor, id=id_proveedor)
 
     if request.method == 'POST':
-        nombre = request.POST.get('nomProv').strip()
+        nombre = request.POST.get('nomProv')
+        if nombre:
+                nombre = nombre.strip()
 
         if not nombre:
             messages.error(request, 'El nombre es obligatorio')
